@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import { supabase, ok } from '../config/supabase.js'
 import { HttpError, signToken, cookieOpts } from '../middleware/auth.js'
 
-const pub = u => ({ id: u.id, username: u.username })
+const pub = u => ({ id: u.id, username: u.username, is_admin: Boolean(u.is_admin) })
 
 export async function register(req, res) {
   const username = String(req.body.username || '').trim(), password = String(req.body.password || '')
@@ -10,7 +10,7 @@ export async function register(req, res) {
   if (password.length < 8 || password.length > 72) throw new HttpError(400, 'Mật khẩu cần từ 8 đến 72 ký tự')
   const taken = ok(await supabase.from('users').select('id').ilike('username', username).maybeSingle())
   if (taken) throw new HttpError(409, 'Username đã tồn tại')
-  const user = ok(await supabase.from('users').insert({ username, password_hash: await bcrypt.hash(password, 10) }).select('id, username').single())
+  const user = ok(await supabase.from('users').insert({ username, password_hash: await bcrypt.hash(password, 10) }).select('id, username, is_admin').single())
   res.cookie('token', signToken(user), cookieOpts()).status(201).json({ user: pub(user) })
 }
 
@@ -25,7 +25,7 @@ export async function login(req, res) {
 export const logout = (_req, res) => res.clearCookie('token', cookieOpts()).json({ ok: true })
 
 export async function me(req, res) {
-  const user = ok(await supabase.from('users').select('id, username').eq('id', req.user.id).maybeSingle())
+  const user = ok(await supabase.from('users').select('id, username, is_admin').eq('id', req.user.id).maybeSingle())
   if (!user) throw new HttpError(401, 'Phiên đăng nhập không hợp lệ')
   res.json({ user })
 }

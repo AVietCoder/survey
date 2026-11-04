@@ -1,11 +1,12 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAdmin, requireAuth } from '../middleware/auth.js'
 import * as auth from '../controllers/auth.js'
 import * as surveys from '../controllers/surveys.js'
 import * as pub from '../controllers/public.js'
 import * as responses from '../controllers/responses.js'
 import * as analytics from '../controllers/analytics.js'
+import * as admin from '../controllers/admin.js'
 
 // Bọc handler async để lỗi đi vào errorHandler
 const w = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
@@ -34,5 +35,16 @@ r.use('/public', p)
 r.get('/responses/survey/:surveyId', requireAuth, w(responses.listBySurvey))
 r.get('/analytics/overview', requireAuth, w(analytics.overview))
 r.get('/analytics/survey/:surveyId', requireAuth, w(analytics.bySurvey))
+
+const ad = Router().use(requireAuth, requireAdmin)
+ad.get('/overview', w(admin.overview))
+ad.get('/users/search', w(admin.searchUsers))
+ad.get('/users', w(admin.listUsers)).post('/users', limit(20), w(admin.createUser))
+ad.put('/users/:id', w(admin.updateUser)).delete('/users/:id', w(admin.removeUser))
+ad.get('/surveys', w(admin.listSurveys)).post('/surveys', w(admin.createSurvey))
+ad.get('/surveys/:id', w(admin.getSurvey)).put('/surveys/:id', w(admin.updateSurvey)).delete('/surveys/:id', w(admin.removeSurvey))
+ad.get('/surveys/:id/responses', w(admin.listResponses))
+ad.delete('/responses/:id', w(admin.removeResponse))
+r.use('/admin', ad)
 
 export default r
