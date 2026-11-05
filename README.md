@@ -5,7 +5,7 @@ Express phục vụ luôn thư mục `frontend/` nên chỉ cần chạy **một
 
 ## Chạy thử
 
-1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor**, dán và chạy `backend/migrations/001_init.sql`.
+1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` rồi `backend/migrations/002_admin.sql`; database đã có thì chỉ cần chạy `002_admin.sql`.
 2. Cấu hình môi trường:
    ```bash
    cd backend
@@ -23,13 +23,13 @@ Express phục vụ luôn thư mục `frontend/` nên chỉ cần chạy **một
 ```
 frontend/            index.html, css/, js/app.js (gọi /api/*)
 backend/
-  migrations/        001_init.sql
+  migrations/        001_init.sql, 002_admin.sql
   scripts/seed.js    dữ liệu mẫu
   src/
     config/          supabase client
-    middleware/      requireAuth (JWT cookie httpOnly), errorHandler
+    middleware/      requireAuth, requireAdmin (kiểm tra quyền từ database), errorHandler
     routes/          khai báo endpoint
-    controllers/     auth, surveys, public, responses, analytics
+    controllers/     auth, surveys, public, responses, analytics, admin
     services/        surveys (lưu câu hỏi), quality (chấm chất lượng)
     app.js
 ```
@@ -44,8 +44,23 @@ backend/
 | `POST /api/public/surveys/:slug/responses` | Gửi phản hồi `{ responseId, answers:[{question_id,value}] }` |
 | `GET /api/responses/survey/:surveyId` | Danh sách phản hồi + trạng thái chất lượng |
 | `GET /api/analytics/overview · /survey/:surveyId` | Tổng quan và thống kê từng câu hỏi |
+| `/api/admin/*` | Khu vực admin: quản lý tài khoản, khảo sát, câu hỏi và phản hồi; mọi endpoint đều kiểm tra `users.is_admin` ở database. Danh sách tài khoản, khảo sát, phản hồi được phân trang 50 mục/trang |
+
+Các endpoint `/api/admin/*` cần đăng nhập và cờ admin; tài khoản thường nhận `403`. Trang quản trị hỗ trợ tạo/sửa/xóa tài khoản, chuyển chủ sở hữu và sửa/xóa khảo sát, xem/xóa phản hồi cùng nội dung câu trả lời. Để tránh tự cấp quyền, trạng thái `is_admin` chỉ được thay đổi trực tiếp trong database.
 
 `PUT /api/surveys/:id` nhận `{title, description, status, settings, questions:[{id?, question_text, question_type, is_required, settings, options:[{label,value}]}]}`. Câu hỏi có `id` cũ được cập nhật tại chỗ nên **không mất câu trả lời** khi sửa khảo sát đã có phản hồi.
+
+### Cấp quyền quản trị
+
+Sau khi chạy migration `002_admin.sql`, hãy tự cấp quyền cho tài khoản mong muốn trong Supabase SQL Editor:
+
+```sql
+update public.users
+set is_admin = true
+where lower(username) = lower('ten_username_cua_ban');
+```
+
+Tài khoản mới mặc định không phải admin. Cột `is_admin` không thể thay đổi qua form đăng ký hoặc trang quản trị; chỉ chủ database cấp quyền. Đăng xuất rồi đăng nhập lại (hoặc tải lại ứng dụng) để làm mới trạng thái quyền.
 
 ## Nhận diện phản hồi đáng ngờ (`services/quality.js`)
 Mỗi tín hiệu trừ điểm từ 100: hoàn thành quá nhanh (35), trùng bộ đáp án (35), chọn cùng một đáp án ở mọi câu thang đo (30), gửi liên tục từ một thiết bị trong 10 phút (30), văn bản vô nghĩa (20).
