@@ -23,11 +23,26 @@ const cleanPassword = value => {
 
 export async function overview(_req, res) {
   const tables = ['users', 'surveys', 'responses']
-  const counts = await Promise.all(tables.map(table =>
-    supabase.from(table).select('id', { count: 'exact', head: true })
-  ))
+  const [counts, userResult, surveyResult] = await Promise.all([
+    Promise.all(tables.map(table => supabase.from(table).select('id', { count: 'exact', head: true }))),
+    supabase.from('users').select('id,username,created_at').order('created_at', { ascending: false }).limit(5),
+    supabase.from('surveys').select('id,user_id,title,updated_at').order('updated_at', { ascending: false }).limit(5)
+  ])
   counts.forEach(({ error }) => { if (error) throw error })
-  res.json({ users: counts[0].count, surveys: counts[1].count, responses: counts[2].count })
+  const recentUsers = ok(userResult)
+  const recentSurveys = ok(surveyResult)
+  const ownerIds = [...new Set(recentSurveys.map(survey => survey.user_id))]
+  const owners = ownerIds.length
+    ? ok(await supabase.from('users').select('id,username').in('id', ownerIds))
+    : []
+  const ownerNames = Object.fromEntries(owners.map(owner => [owner.id, owner.username]))
+  res.json({
+    users: counts[0].count,
+    surveys: counts[1].count,
+    responses: counts[2].count,
+    recentUsers,
+    recentSurveys: recentSurveys.map(survey => ({ ...survey, owner: ownerNames[survey.user_id] || 'Không rõ' }))
+  })
 }
 
 export async function listUsers(req, res) {

@@ -87,16 +87,40 @@ function collect(q,root){
 /* ---------- khung chung ---------- */
 const nav=[['dashboard','Tổng quan','home'],['builder','Trình tạo','edit'],['analytics','Phân tích','chart']];
 function shell(r,html){
- app().className='app';
+ const isAdmin=r=='admin';
+ app().className='app'+(isAdmin?' admin-shell':'');
  const links=me?.is_admin?[...nav,['admin','Quản trị','shield']]:nav;
- app().innerHTML=`<aside class="side"><div class="logo"><i></i>Lumen</div><nav class="nav">${links.map(([k,l,i])=>`<a href="#/${k}" class="${k==r?'on':''}" ${k==r?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[i]}</svg>${l}</a>`).join('')}</nav>
- <div class="tip"><b>Mẹo thiết kế</b><br>Nhóm 5–7 câu mỗi trang để giảm mệt mỏi nhận thức.</div>
- <div class="who">${esc(me.username)}<button id="out">Đăng xuất</button></div></aside><main>${html}</main>`;
+ const route=location.hash.replace(/^#\/?/,'').split('?')[0].split('/');
+ const adminLabel=route[1]=='users'?'Tài khoản':route[1]=='surveys'?(route[2]?'Chi tiết khảo sát':'Khảo sát'):'Tổng quan';
+ const searchEnabled=isAdmin&&(route[1]=='users'||route[1]=='surveys'&&(route.length<3||Boolean(route[2])));
+ const searchAttribute=searchEnabled?(route[1]=='surveys'&&route[2]?'data-response-search':'data-admin-search'):'';
+ const adminLinks=[['overview','Tổng quan'],['users','Tài khoản'],['surveys','Khảo sát']];
+ const navigation=isAdmin?`<div class="admin-nav-group"><span class="admin-nav-label">Khảo sát</span><nav class="nav">${links.filter(([key])=>key!='admin').map(([key,label,icon])=>`<a href="#/${key}" class="${key==r?'on':''}" ${key==r?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[icon]}</svg><span>${label}</span></a>`).join('')}</nav><span class="admin-nav-label">Quản trị</span><nav class="nav">${adminLinks.map(([key,label])=>`<a href="#/admin${key=='overview'?'':'/'+key}" class="${key===(route[1]||'overview')?'on':''}" ${key===(route[1]||'overview')?'aria-current="page"':''}><svg viewBox="0 0 24 24">${key=='overview'?ic.chart:key=='users'?'<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5.2a3 3 0 0 1 0 5.6M18 14a5 5 0 0 1 3 4.6V20"/>':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>'}</svg><span>${label}</span></a>`).join('')}</nav></div>`:`<nav class="nav">${links.map(([k,l,i])=>`<a href="#/${k}" class="${k==r?'on':''}" ${k==r?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[i]}</svg><span>${l}</span></a>`).join('')}</nav>`;
+ const profileInitial=esc((me.username||'?').slice(0,1).toUpperCase());
+ const mainContent=isAdmin?`<div class="admin-topbar"><label class="admin-quick-search" ${searchEnabled?'':'hidden'}><span aria-hidden="true">⌕</span><input id="admin-quick-search" ${searchAttribute} type="search" placeholder="Tìm trong trang hiện tại" aria-label="Tìm trong danh sách hiện tại"></label><div class="admin-topbar-spacer"></div><a class="admin-top-link" href="#/admin/users">Tài khoản</a><a class="admin-top-link" href="#/admin/surveys">Khảo sát</a><div class="admin-profile"><span class="admin-avatar" aria-hidden="true">${profileInitial}</span><span>${esc(me.username)}<small>Quản trị viên</small></span></div></div>${html}<footer class="admin-footer"><span>Lumen · Quản trị hệ thống</span><span>Chỉ tài khoản có quyền quản trị được truy cập</span></footer>`:html;
+ app().innerHTML=`<aside class="side"><div class="logo"><i></i><span>Lumen</span>${isAdmin?'<button type="button" class="admin-nav-toggle" id="admin-nav-toggle" aria-label="Thu gọn thanh điều hướng" aria-expanded="true">‹</button>':''}</div>${navigation}
+ ${!isAdmin?'<div class="tip"><b>Mẹo thiết kế</b><br>Nhóm 5–7 câu mỗi trang để giảm mệt mỏi nhận thức.</div>':''}
+ <div class="who">${esc(me.username)}<button id="out">Đăng xuất</button></div></aside><main>${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}</main>`;
+ if(isAdmin){
+  const collapsed=localStorage.getItem('lumen-admin-nav-collapsed')=='true';
+  app().classList.toggle('nav-collapsed',collapsed);
+  const toggle=$('#admin-nav-toggle');
+  toggle.setAttribute('aria-expanded',String(!collapsed));
+  toggle.setAttribute('aria-label',collapsed?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng');
+  toggle.textContent=collapsed?'›':'‹';
+  if(matchMedia('(max-width: 760px)').matches){toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','Mở điều hướng')}
+  toggle.onclick=()=>{
+   if(matchMedia('(max-width: 760px)').matches){const open=app().classList.toggle('mobile-nav-open');toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'Đóng điều hướng':'Mở điều hướng');toggle.textContent=open?'×':'☰';return}
+   const next=app().classList.toggle('nav-collapsed');localStorage.setItem('lumen-admin-nav-collapsed',String(next));toggle.setAttribute('aria-expanded',String(!next));toggle.setAttribute('aria-label',next?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng');toggle.textContent=next?'›':'‹'
+  };
+  const quickSearch=$('#admin-quick-search');
+  if(quickSearch)quickSearch.oninput=()=>{const search=$('[data-admin-search]')||$('[data-response-search]');if(search&&search!==quickSearch){search.value=quickSearch.value;search.dispatchEvent(new Event('input',{bubbles:true}))}};
+ }
  $('#out').onclick=async()=>{await api('POST','/auth/logout').catch(()=>{});me=null;location.hash='#/login';render()}}
 const loading=r=>{
  const content=`<div class="page-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="Đang tải nội dung">
   <div class="skeleton-head"><div class="skeleton-block skeleton-title"></div><div class="skeleton-block skeleton-action"></div></div>
-  <div class="grid g4">${Array.from({length:4},()=>'<div class="card kpi skeleton-card"><i class="skeleton-block"></i><b class="skeleton-block"></b><small class="skeleton-block"></small></div>').join('')}</div>
+  <div class="grid ${r=='admin'?'g3':'g4'}">${Array.from({length:r=='admin'?3:4},()=>'<div class="card kpi skeleton-card"><i class="skeleton-block"></i><b class="skeleton-block"></b><small class="skeleton-block"></small></div>').join('')}</div>
   ${r=='builder'?'<div class="skeleton-builder"><div class="card"><i class="skeleton-block"></i><i class="skeleton-block"></i><i class="skeleton-block"></i><i class="skeleton-block"></i></div><div class="card"><i class="skeleton-block"></i><i class="skeleton-block"></i></div></div>':r=='analytics'?'<div class="skeleton-builder"><div class="card skeleton-chart"><i class="skeleton-block"></i></div><div class="card skeleton-chart"><i class="skeleton-block"></i></div></div>':'<div class="skeleton-list"><i class="skeleton-block"></i><i class="skeleton-block"></i></div>'}
  </div>`;
  shell(r,content)
@@ -135,6 +159,7 @@ async function dashboardView(){
 
 /* ---------- Quản trị viên ---------- */
 const adminTypes=types.map(([id,,label])=>[id,label]);
+const adminQualityLabel={normal:'Bình thường',suspicious:'Đáng ngờ',spam:'Spam'};
 const adminTabs=section=>`<div class="admin-tabs"><a class="${section=='overview'?'on':''}" href="#/admin">Tổng quan</a><a class="${section=='users'?'on':''}" href="#/admin/users">Tài khoản</a><a class="${section=='surveys'?'on':''}" href="#/admin/surveys">Khảo sát</a></div>`;
 const adminPager=(path,page,pageSize,total)=>{
  const pageCount=Math.max(1,Math.ceil(total/pageSize)),base='#/admin/'+path;
@@ -147,6 +172,82 @@ function wireAdminOwnerSearch(root){
   try{const result=await api('GET','/admin/users/search?q='+encodeURIComponent(query));if(id!==requestId)return;
    select.innerHTML=result.users.length?result.users.map(u=>`<option value="${u.id}">${esc(u.username)}</option>`).join(''):'<option value="">Không tìm thấy tài khoản</option>'
   }catch(e){if(id===requestId)toast(e.message)}}
+}
+function wireAdminTable(root,onBulk){
+ const rows=$$('[data-admin-row]',root),search=$('[data-admin-search]',root),filter=$('[data-admin-filter]',root);
+ const selectAll=$('[data-admin-select-all]',root),bulk=$('[data-admin-bulk]',root),count=$('[data-admin-result-count]',root),empty=$('[data-admin-filter-empty]',root);
+ const update=()=>{
+  const query=(search?.value||'').trim().toLocaleLowerCase('vi'),status=filter?.value||'';
+  rows.forEach(row=>{row.hidden=!(row.textContent.toLocaleLowerCase('vi').includes(query)&&(!status||row.dataset.filter==status))});
+  const visible=rows.filter(row=>!row.hidden),selected=rows.filter(row=>$('[data-admin-select-row]',row)?.checked),selectable=visible.filter(row=>{const checkbox=$('[data-admin-select-row]',row);return checkbox&&!checkbox.disabled}),visibleSelected=selectable.filter(row=>$('[data-admin-select-row]',row)?.checked);
+  if(empty)empty.hidden=visible.length>0;
+  if(count)count.textContent=`${visible.length} mục trong trang này · ${Number(count.dataset.total).toLocaleString('vi')} tổng cộng`;
+  if(selectAll){selectAll.checked=selectable.length>0&&visibleSelected.length===selectable.length;selectAll.indeterminate=visibleSelected.length>0&&visibleSelected.length<selectable.length;selectAll.disabled=!selectable.length}
+  if(bulk){bulk.hidden=!selected.length;bulk.textContent=`Xóa ${selected.length} mục đã chọn`}
+ };
+ search?.addEventListener('input',update);filter?.addEventListener('change',update);
+ selectAll?.addEventListener('change',()=>{rows.filter(row=>!row.hidden).forEach(row=>{const checkbox=$('[data-admin-select-row]',row);if(checkbox&&!checkbox.disabled)checkbox.checked=selectAll.checked});update()});
+ rows.forEach(row=>$('[data-admin-select-row]',row)?.addEventListener('change',update));
+ $$('[data-column-toggle]',root).forEach(toggle=>toggle.addEventListener('change',()=>{
+  const table=$('table.admin-table',root);if(!table)return;
+  const key=toggle.dataset.columnToggle;
+  $$(`[data-column="${key}"]`,table).forEach(cell=>{cell.hidden=!toggle.checked})
+ }));
+ $$('[data-admin-sort]',root).forEach(button=>button.addEventListener('click',()=>{
+  const table=button.closest('table'),body=$('tbody',table),index=Number(button.dataset.adminSort),column=button.closest('th');
+  const ascending=button.dataset.direction!='asc';
+  $$('[data-admin-sort]',table).forEach(other=>{other.dataset.direction='';other.closest('th').removeAttribute('aria-sort')});
+  button.dataset.direction=ascending?'asc':'desc';column.setAttribute('aria-sort',ascending?'ascending':'descending');
+  [...body.rows].sort((a,b)=>{
+   const av=$(`[data-sort-${index}]`,a)?.getAttribute(`data-sort-${index}`)||a.cells[index]?.textContent.trim()||'';
+   const bv=$(`[data-sort-${index}]`,b)?.getAttribute(`data-sort-${index}`)||b.cells[index]?.textContent.trim()||'';
+   const an=Number(av),bn=Number(bv),numeric=av!==''&&bv!==''&&Number.isFinite(an)&&Number.isFinite(bn);
+   return (numeric?an-bn:av.localeCompare(bv,'vi',{numeric:true,sensitivity:'base'}))*(ascending?1:-1)
+  }).forEach(row=>body.append(row))
+ }));
+ bulk?.addEventListener('click',()=>onBulk&&onBulk(rows.filter(row=>$('[data-admin-select-row]',row)?.checked)));
+ update()
+}
+function editUserDialog(username){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');
+  dialog.className='confirm-dialog admin-edit-dialog';
+  dialog.innerHTML=`<form class="dialog-content" method="dialog" id="admin-edit-user"><span class="chip c-run">Tài khoản</span><h2>Chỉnh sửa tài khoản</h2><label>Username<input class="in" name="username" value="${esc(username)}" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" required></label><label>Mật khẩu mới <span>Để trống nếu không đổi</span><input class="in" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password"></label><div class="dialog-actions"><button class="btn" type="button" data-edit-cancel>Hủy</button><button class="btn pri" type="submit">Lưu thay đổi</button></div></form>`;
+  let finished=false;
+  const finish=value=>{if(finished)return;finished=true;if(dialog.open)dialog.close();dialog.remove();resolve(value)};
+  $('#admin-edit-user',dialog).addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;finish({username:form.username.value.trim(),password:form.password.value||undefined})});
+  $('[data-edit-cancel]',dialog).onclick=()=>finish(null);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();finish(null)});
+  dialog.addEventListener('click',event=>{if(event.target===dialog)finish(null)});
+  document.body.append(dialog);dialog.showModal();$('input[name=username]',dialog).focus()
+ })
+}
+function wireAdminResponses(surveyId,page){
+ const root=$('#admin-response-list');
+ if(!root)return;
+ const rows=$$('[data-admin-response]',root),search=$('[data-response-search]',root),filter=$('[data-response-filter]',root);
+ const selectAll=$('[data-response-select-all]',root),bulk=$('[data-response-bulk]',root),count=$('[data-response-count]',root),empty=$('[data-response-empty]',root);
+ const update=()=>{
+  const query=(search?.value||'').trim().toLocaleLowerCase('vi'),status=filter?.value||'';
+  rows.forEach(row=>{row.hidden=!(row.dataset.search.toLocaleLowerCase('vi').includes(query)&&(!status||row.dataset.status==status))});
+  const visible=rows.filter(row=>!row.hidden),selected=rows.filter(row=>$('[data-response-select]',row)?.checked),visibleSelected=visible.filter(row=>$('[data-response-select]',row)?.checked);
+  if(empty)empty.hidden=visible.length>0;
+  if(count)count.textContent=`${visible.length} phản hồi trong trang này`;
+  if(selectAll){selectAll.checked=visible.length>0&&visibleSelected.length===visible.length;selectAll.indeterminate=visibleSelected.length>0&&visibleSelected.length<visible.length;selectAll.disabled=!visible.length}
+  if(bulk){bulk.hidden=!selected.length;bulk.textContent=`Xóa ${selected.length} phản hồi`}
+ };
+ search?.addEventListener('input',update);filter?.addEventListener('change',update);
+ selectAll?.addEventListener('change',()=>{rows.filter(row=>!row.hidden).forEach(row=>{$('[data-response-select]',row).checked=selectAll.checked});update()});
+ rows.forEach(row=>$('[data-response-select]',row)?.addEventListener('change',update));
+ bulk?.addEventListener('click',async()=>{
+  const selected=rows.filter(row=>$('[data-response-select]',row)?.checked);
+  if(!selected.length||!await confirmAction(`Xóa ${selected.length} phản hồi và toàn bộ câu trả lời liên quan?`,'Xóa phản hồi đã chọn?','Xóa phản hồi'))return;
+  bulk.disabled=true;const results=await Promise.allSettled(selected.map(row=>api('DELETE','/admin/responses/'+row.dataset.id)));
+  const failed=results.filter(result=>result.status=='rejected').length;
+  toast(failed?`Đã xóa ${results.length-failed}/${results.length}; ${failed} phản hồi chưa xóa được.`:`Đã xóa ${results.length} phản hồi`);
+  adminView('surveys',surveyId,Math.max(1,results.length===rows.length&&page>1?page-1:page))
+ });
+ update()
 }
 const adminQuestion=(q,i)=>`<section class="admin-question" data-admin-question="${i}">
  <div class="admin-question-head"><strong>Câu hỏi ${i+1}</strong><button class="btn danger" type="button" data-question-remove="${i}">Xóa câu hỏi</button></div>
@@ -162,27 +263,36 @@ async function adminView(section='overview',surveyId,page=1){
  page=Math.max(1,page);
  loading('admin');
  const tabs=adminTabs(section);
- const navBack=`<div class="head"><div><h1>Quản trị hệ thống</h1><p>Quản lý tài khoản, khảo sát và phản hồi trên toàn hệ thống.</p></div></div>${tabs}`;
+ const navBack=`<div class="head admin-page-header"><div><h1>Quản trị hệ thống</h1><p>Quản lý tài khoản, khảo sát và phản hồi trên toàn hệ thống.</p></div></div>${tabs}`;
  try{
   if(section=='users'){
   const data=await api('GET','/admin/users?page='+page),{users,total,pageSize}=data;
   const actualPage=Math.min(page,Math.max(1,Math.ceil(total/pageSize)));
   if(actualPage!==page)return adminView('users',null,actualPage);
-   shell('admin',`${navBack}<div class="admin-layout"><section class="card"><h2>Tạo tài khoản</h2><form id="admin-user-create" class="admin-form">
+   shell('admin',`${navBack}<div class="admin-layout"><section class="card"><h2>Tạo tài khoản</h2><p class="admin-panel-hint">Tạo thông tin đăng nhập cho người dùng mới.</p><form id="admin-user-create" class="admin-form">
     <label>Username<input class="in" name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" required></label>
     <label>Mật khẩu tạm<input class="in" name="password" type="password" minlength="8" maxlength="72" required></label>
     <button class="btn pri" type="submit">Thêm tài khoản</button></form>
     <p class="admin-note">Quyền quản trị được cấp thủ công bằng cột <code>is_admin</code> trong database.</p></section>
-    <section class="card admin-table-card"><div class="admin-section-head"><h2>Tài khoản</h2><span>${total} tổng cộng</span></div>
-    ${users.length?`<div class="admin-table-wrap"><table class="tbl"><thead><tr><th>Tài khoản</th><th>Quyền</th><th>Được tạo</th><th>Chỉnh sửa</th><th></th></tr></thead><tbody>${users.map(u=>`<tr>
-     <td><strong>${esc(u.username)}</strong><small class="admin-id">${esc(u.id)}</small></td>
-     <td><span class="chip ${u.is_admin?'c-run':'c-end'}">${u.is_admin?'Admin':'Người dùng'}</span></td>
-     <td>${new Date(u.created_at).toLocaleDateString('vi')}</td>
-     <td><form class="admin-user-edit" data-user-edit="${u.id}"><input class="in" name="username" value="${esc(u.username)}" aria-label="Username mới" maxlength="30" required><input class="in" name="password" type="password" placeholder="Mật khẩu mới (nếu đổi)" aria-label="Mật khẩu mới" minlength="8" maxlength="72"><button class="btn" type="submit">Lưu</button></form></td>
-     <td><button class="btn danger" data-user-remove="${u.id}" ${u.id==me.id?'disabled title="Không thể xóa tài khoản đang đăng nhập"':''}>Xóa</button></td>
-    </tr>`).join('')}</tbody></table></div>`:'<div class="state">Chưa có tài khoản nào ở trang này.</div>'}${adminPager('users',page,pageSize,total)}</section></div>`);
+    <section class="card admin-table-card"><div class="admin-section-head"><div><h2>Tài khoản</h2><p class="admin-panel-hint">Quản lý đăng nhập và thông tin của từng tài khoản.</p></div><a class="btn admin-action-link" href="#/admin/surveys">Quản lý khảo sát</a></div>
+    <div class="admin-table-tools"><label class="admin-filter-label">Vai trò<select class="sel" data-admin-filter><option value="">Tất cả vai trò</option><option value="admin">Admin</option><option value="user">Người dùng</option></select></label><span class="admin-result-count" data-admin-result-count data-total="${total}"></span><details class="admin-columns"><summary class="btn">Cột</summary><div>${[['role','Quyền'],['created','Ngày tạo']].map(([key,label])=>`<label><input type="checkbox" data-column-toggle="${key}" checked> ${label}</label>`).join('')}</div></details><label class="admin-select-all"><input type="checkbox" data-admin-select-all> Chọn tất cả</label><button class="btn danger" data-admin-bulk hidden>Xóa mục đã chọn</button></div>
+    ${users.length?`<div class="admin-table-wrap"><table class="tbl admin-table"><thead><tr><th><span class="sr-only">Chọn</span></th><th><button type="button" data-admin-sort="1">Tài khoản</button></th><th data-column="role"><button type="button" data-admin-sort="2">Quyền</button></th><th data-column="created"><button type="button" data-admin-sort="3">Ngày tạo</button></th><th>Thao tác</th></tr></thead><tbody>${users.map(u=>`<tr data-admin-row data-filter="${u.is_admin?'admin':'user'}">
+     <td><input type="checkbox" data-admin-select-row aria-label="Chọn tài khoản ${esc(u.username)}" ${u.id==me.id?'disabled title="Không thể xóa tài khoản đang đăng nhập"':''}></td>
+     <td data-sort-1="${esc(u.username.toLocaleLowerCase('vi'))}"><strong>${esc(u.username)}</strong><small class="admin-id">${esc(u.id)}</small></td>
+     <td data-column="role" data-sort-2="${u.is_admin?'1':'0'}"><span class="chip ${u.is_admin?'c-run':'c-end'}">${u.is_admin?'Admin':'Người dùng'}</span></td>
+     <td data-column="created" data-sort-3="${esc(u.created_at)}">${new Date(u.created_at).toLocaleDateString('vi')}</td>
+     <td><div class="admin-row-actions"><button class="btn" data-user-edit="${u.id}" data-username="${esc(u.username)}">Chỉnh sửa</button><button class="btn danger" data-user-remove="${u.id}" ${u.id==me.id?'disabled title="Không thể xóa tài khoản đang đăng nhập"':''}>Xóa</button></div></td>
+    </tr>`).join('')}</tbody></table><div class="state admin-filter-empty" data-admin-filter-empty hidden>Không tìm thấy tài khoản phù hợp.</div></div>`:'<div class="state">Chưa có tài khoản nào ở trang này.</div>'}${adminPager('users',page,pageSize,total)}</section></div>`);
+   wireAdminTable(app(),async selected=>{
+    if(!await confirmAction(`Xóa ${selected.length} tài khoản và các khảo sát, câu hỏi, phản hồi liên quan?`,'Xóa tài khoản đã chọn?','Xóa tài khoản'))return;
+    const button=$('[data-admin-bulk]');button.disabled=true;
+    const errors=[];
+    for(const row of selected){try{await api('DELETE','/admin/users/'+row.querySelector('[data-user-remove]').dataset.userRemove)}catch(error){errors.push(error)}}
+    toast(errors.length?`Đã xóa ${selected.length-errors.length}/${selected.length}; ${errors.length} tài khoản chưa xóa được. ${errors[0].message}`:`Đã xóa ${selected.length} tài khoản`);
+    adminView('users',null,selected.length===users.length&&page>1?page-1:page)
+   });
    $('#admin-user-create').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=$('button[type=submit]',form),restore=setButtonLoading(button,'Đang tạo…');try{await api('POST','/admin/users',{username:form.username.value,password:form.password.value});toast('Đã tạo tài khoản');adminView('users')}catch(err){restore();toast(err.message)}};
-   $$('[data-user-edit]').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const button=$('button[type=submit]',form),restore=setButtonLoading(button,'Đang lưu…');try{await api('PUT','/admin/users/'+form.dataset.userEdit,{username:form.username.value,password:form.password.value||undefined});toast('Đã cập nhật tài khoản');adminView('users')}catch(err){restore();toast(err.message)}});
+   $$('[data-user-edit]').forEach(button=>button.onclick=async()=>{const changes=await editUserDialog(button.dataset.username);if(!changes)return;const restore=setButtonLoading(button,'Đang lưu…');try{await api('PUT','/admin/users/'+button.dataset.userEdit,changes);toast('Đã cập nhật tài khoản');adminView('users')}catch(err){restore();toast(err.message)}});
    $$('[data-user-remove]').forEach(button=>button.onclick=async()=>{if(!await confirmAction('Tài khoản, khảo sát, câu hỏi và phản hồi liên quan sẽ bị xóa vĩnh viễn.','Xóa tài khoản?','Xóa tài khoản'))return;const lastOnPage=$$('[data-user-remove]').length===1,restore=setButtonLoading(button,'Đang xóa…');try{await api('DELETE','/admin/users/'+button.dataset.userRemove);toast('Đã xóa tài khoản');adminView('users',null,lastOnPage&&page>1?page-1:page)}catch(err){restore();toast(err.message)}});
    return
   }
@@ -191,17 +301,27 @@ async function adminView(section='overview',surveyId,page=1){
    const {surveys,total,pageSize}=data,users=accountData.users;
    const actualPage=Math.min(page,Math.max(1,Math.ceil(total/pageSize)));
    if(actualPage!==page)return adminView('surveys',null,actualPage);
-   shell('admin',`${navBack}<section class="card admin-create-survey"><h2>Tạo khảo sát cho tài khoản</h2><form id="admin-survey-create" class="admin-survey-form">
+   shell('admin',`${navBack}<section class="card admin-create-survey"><h2>Tạo khảo sát cho tài khoản</h2><p class="admin-panel-hint">Chọn chủ sở hữu để tạo khảo sát thay mặt họ.</p><form id="admin-survey-create" class="admin-survey-form">
     <label>Tìm chủ sở hữu<input class="in" data-owner-search placeholder="Nhập ít nhất 2 ký tự username"></label>
     <label>Chủ sở hữu<select class="sel" name="user_id" data-owner-select required>${users.map(u=>`<option value="${u.id}">${esc(u.username)}</option>`).join('')}</select></label>
     <label>Tên khảo sát<input class="in" name="title" maxlength="200" value="Khảo sát chưa đặt tên"></label><button class="btn pri" type="submit">Tạo khảo sát</button></form></section>
-    <section class="card admin-table-card"><div class="admin-section-head"><h2>Tất cả khảo sát</h2><span>${total} tổng cộng</span></div>
-    ${surveys.length?`<div class="admin-table-wrap"><table class="tbl"><thead><tr><th>Khảo sát</th><th>Chủ sở hữu</th><th>Trạng thái</th><th>Phản hồi</th><th></th></tr></thead><tbody>${surveys.map(s=>`<tr>
-     <td><strong>${esc(s.title)}</strong><small class="admin-id">${esc(s.id)}</small></td><td>${esc(s.owner)}</td>
-     <td><span class="chip ${SL[s.status]?.[1]||'c-end'}">${SL[s.status]?.[0]||esc(s.status)}</span></td>
-     <td>${s.response_count}</td><td><a class="btn" href="#/admin/surveys/${s.id}">Mở quản lý</a></td>
-    </tr>`).join('')}</tbody></table></div>`:'<div class="state">Chưa có khảo sát nào ở trang này.</div>'}${adminPager('surveys',page,pageSize,total)}</section>`);
+    <section class="card admin-table-card"><div class="admin-section-head"><div><h2>Tất cả khảo sát</h2><p class="admin-panel-hint">Tìm, lọc và quản lý khảo sát trên toàn hệ thống.</p></div><a class="btn admin-action-link" href="#/admin/users">Quản lý tài khoản</a></div>
+    <div class="admin-table-tools"><label class="admin-filter-label">Trạng thái<select class="sel" data-admin-filter><option value="">Tất cả trạng thái</option><option value="published">Đang chạy</option><option value="draft">Bản nháp</option><option value="archived">Lưu trữ</option></select></label><span class="admin-result-count" data-admin-result-count data-total="${total}"></span><details class="admin-columns"><summary class="btn">Cột</summary><div>${[['owner','Chủ sở hữu'],['status','Trạng thái'],['responses','Phản hồi']].map(([key,label])=>`<label><input type="checkbox" data-column-toggle="${key}" checked> ${label}</label>`).join('')}</div></details><label class="admin-select-all"><input type="checkbox" data-admin-select-all> Chọn tất cả</label><button class="btn danger" data-admin-bulk hidden>Xóa mục đã chọn</button></div>
+    ${surveys.length?`<div class="admin-table-wrap"><table class="tbl admin-table"><thead><tr><th><span class="sr-only">Chọn</span></th><th><button type="button" data-admin-sort="1">Khảo sát</button></th><th data-column="owner"><button type="button" data-admin-sort="2">Chủ sở hữu</button></th><th data-column="status"><button type="button" data-admin-sort="3">Trạng thái</button></th><th data-column="responses"><button type="button" data-admin-sort="4">Phản hồi</button></th><th>Thao tác</th></tr></thead><tbody>${surveys.map(s=>`<tr data-admin-row data-id="${s.id}" data-filter="${esc(s.status)}">
+     <td><input type="checkbox" data-admin-select-row aria-label="Chọn khảo sát ${esc(s.title)}"></td>
+     <td data-sort-1="${esc(s.title.toLocaleLowerCase('vi'))}"><strong>${esc(s.title)}</strong><small class="admin-id">${esc(s.id)}</small></td><td data-sort-2="${esc(s.owner.toLocaleLowerCase('vi'))}">${esc(s.owner)}</td>
+     <td data-column="status" data-sort-3="${esc(s.status)}"><span class="chip ${SL[s.status]?.[1]||'c-end'}">${SL[s.status]?.[0]||esc(s.status)}</span></td>
+     <td data-column="responses" data-sort-4="${s.response_count}">${Number(s.response_count).toLocaleString('vi')}</td><td><a class="btn" href="#/admin/surveys/${s.id}">Mở quản lý</a></td>
+    </tr>`).join('')}</tbody></table><div class="state admin-filter-empty" data-admin-filter-empty hidden>Không tìm thấy khảo sát phù hợp.</div></div>`:'<div class="state">Chưa có khảo sát nào ở trang này.</div>'}${adminPager('surveys',page,pageSize,total)}</section>`);
    wireAdminOwnerSearch(app());
+   wireAdminTable(app(),async selected=>{
+    if(!await confirmAction(`Xóa ${selected.length} khảo sát cùng toàn bộ câu hỏi và phản hồi liên quan?`,'Xóa khảo sát đã chọn?','Xóa khảo sát'))return;
+    const button=$('[data-admin-bulk]');button.disabled=true;
+    const results=await Promise.allSettled(selected.map(row=>api('DELETE','/admin/surveys/'+row.dataset.id)));
+    const failed=results.filter(result=>result.status=='rejected').length;
+    toast(failed?`Đã xóa ${results.length-failed}/${results.length}; ${failed} khảo sát chưa xóa được.`:`Đã xóa ${results.length} khảo sát`);
+    adminView('surveys',null,results.length===surveys.length&&page>1?page-1:page)
+   });
    $('#admin-survey-create').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=$('button[type=submit]',form),restore=setButtonLoading(button,'Đang tạo…');try{const result=await api('POST','/admin/surveys',{user_id:form.user_id.value,title:form.title.value});location.hash='#/admin/surveys/'+result.survey.id}catch(err){restore();toast(err.message)}};
    return
   }
@@ -222,14 +342,17 @@ async function adminView(section='overview',surveyId,page=1){
       <div id="admin-questions">${questions.map(adminQuestion).join('')}</div>
       <button class="btn pri" type="submit">Lưu thay đổi</button>
      </form>
-     <section class="card admin-table-card">          <div class="admin-section-head"><h2>Phản hồi (${responsesData.total})</h2><span>Trang ${page}</span></div>
-      ${responsesData.responses.length?`<div class="admin-responses">${responsesData.responses.map(r=>`<details class="admin-response">
-       <summary><span>${r.submitted_at?new Date(r.submitted_at).toLocaleString('vi'):'Chưa hoàn tất'}</span><span class="chip ${r.quality_status=='normal'?'c-ok':r.quality_status=='spam'?'c-bad':'c-warn'}">${esc(r.quality_status)}</span></summary>
-       <button class="btn danger" type="button" data-response-remove="${r.id}">Xóa phản hồi</button>
-       <div class="admin-answers">${(r.answers||[]).length?(r.answers||[]).map(a=>`<div><strong>${esc(a.questions?.question_text||'Câu hỏi đã xóa')}</strong><p>${esc(typeof a.answer_value=='string'?a.answer_value:JSON.stringify(a.answer_value))}</p></div>`).join(''):'<p>Chưa có câu trả lời.</p>'}</div>
-      </details>`).join('')}</div>`:'<div class="state">Chưa có phản hồi nào ở trang này.</div>'}${adminPager('surveys/'+survey.id,page,responsesData.pageSize,responsesData.total)}
+     <section class="card admin-table-card"><div class="admin-section-head"><div><h2>Phản hồi (${responsesData.total})</h2><p class="admin-panel-hint">Mở từng phản hồi để xem nội dung và tín hiệu chất lượng.</p></div><span>Trang ${page}</span></div>
+      ${responsesData.responses.length?`<div class="admin-response-tools"><label class="admin-filter-label">Chất lượng<select class="sel" data-response-filter><option value="">Tất cả trạng thái</option><option value="normal">Bình thường</option><option value="suspicious">Đáng ngờ</option><option value="spam">Spam</option></select></label><span class="admin-response-search"><span aria-hidden="true">⌕</span><input type="search" data-response-search placeholder="Tìm trong phản hồi trang này" aria-label="Tìm trong các phản hồi trên trang"></span><span data-response-count>${responsesData.responses.length} phản hồi trong trang này</span><label class="admin-select-all"><input type="checkbox" data-response-select-all> Chọn tất cả</label><button class="btn danger" data-response-bulk hidden>Xóa phản hồi</button></div>
+      <div class="admin-responses" id="admin-response-list">${responsesData.responses.map(r=>{const responseSearch=[r.submitted_at,r.quality_status,...(r.answers||[]).map(a=>typeof a.answer_value=='string'?a.answer_value:JSON.stringify(a.answer_value))].join(' ');return `<div class="admin-response-item" data-admin-response data-id="${r.id}" data-status="${esc(r.quality_status||'')}" data-search="${esc(responseSearch)}">
+       <label class="admin-response-select"><input type="checkbox" data-response-select aria-label="Chọn phản hồi ${r.submitted_at?new Date(r.submitted_at).toLocaleString('vi'):'chưa hoàn tất'}"><span class="sr-only">Chọn phản hồi</span></label>
+       <details class="admin-response"><summary><span>${r.submitted_at?new Date(r.submitted_at).toLocaleString('vi'):'Chưa hoàn tất'}</span><span class="chip ${r.quality_status=='normal'?'c-ok':r.quality_status=='spam'?'c-bad':'c-warn'}">${esc(adminQualityLabel[r.quality_status]||'Chưa phân loại')}</span></summary>
+        <button class="btn danger" type="button" data-response-remove="${r.id}">Xóa phản hồi</button>
+        <div class="admin-answers">${(r.answers||[]).length?(r.answers||[]).map(a=>`<div><strong>${esc(a.questions?.question_text||'Câu hỏi đã xóa')}</strong><p>${esc(typeof a.answer_value=='string'?a.answer_value:JSON.stringify(a.answer_value))}</p></div>`).join(''):'<p>Chưa có câu trả lời.</p>'}</div>
+       </details></div>`}).join('')}<div class="state admin-filter-empty" data-response-empty hidden>Không tìm thấy phản hồi phù hợp.</div></div>`:'<div class="state">Chưa có phản hồi nào ở trang này.</div>'}${adminPager('surveys/'+survey.id,page,responsesData.pageSize,responsesData.total)}
      </section>`);
     wireAdminOwnerSearch(app());
+    wireAdminResponses(survey.id,page);
     const readQuestions=()=>$$('[data-admin-question]').map(card=>{
      const q=questions[+card.dataset.adminQuestion];
      let settings;
@@ -249,7 +372,13 @@ async function adminView(section='overview',surveyId,page=1){
    renderSurvey();return
   }
   const data=await api('GET','/admin/overview');
-  shell('admin',`${navBack}<div class="grid g3 admin-stats">${[['Tài khoản',data.users,'users'],['Khảo sát',data.surveys,'surveys'],['Phản hồi',data.responses,'surveys']].map(([label,count,key])=>`<a class="card admin-stat" href="#/admin/${key}"><span>${label}</span><strong>${Number(count).toLocaleString('vi')}</strong><small>Mở quản lý →</small></a>`).join('')}</div>
+  const activity=[
+   ...data.recentUsers.map(user=>({type:'Tài khoản mới',label:user.username,date:user.created_at,href:'#/admin/users',icon:'+',tone:'teal'})),
+   ...data.recentSurveys.map(survey=>({type:`Khảo sát cập nhật · ${survey.owner}`,label:survey.title,date:survey.updated_at,href:'#/admin/surveys/'+survey.id,icon:'↗',tone:'iris'}))
+  ].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);
+  shell('admin',`${navBack}<div class="grid g3 admin-stats">${[['Tài khoản',data.users,'users','Tổng số tài khoản trên hệ thống'],['Khảo sát',data.surveys,'surveys','Tất cả trạng thái'],['Phản hồi',data.responses,'surveys','Bản ghi phản hồi']].map(([label,count,key,hint])=>`<a class="card admin-stat" href="#/admin/${key}"><span>${label}</span><strong>${Number(count).toLocaleString('vi')}</strong><small>${hint} · Mở quản lý →</small></a>`).join('')}</div>
+   <div class="grid g2 admin-overview-grid"><section class="card admin-activity"><div class="admin-section-head"><div><h2>Hoạt động gần đây</h2><p class="admin-panel-hint">Tài khoản mới và khảo sát được cập nhật gần nhất.</p></div><span>Dữ liệu thực tế</span></div>${activity.length?`<ol>${activity.map(item=>`<li><span class="admin-activity-mark ${item.tone}" aria-hidden="true">${item.icon}</span><div><a href="${item.href}">${esc(item.label)}</a><small>${esc(item.type)} · ${ago(item.date)}</small></div><time datetime="${esc(item.date)}">${new Date(item.date).toLocaleDateString('vi')}</time></li>`).join('')}</ol>`:'<div class="state">Chưa có hoạt động gần đây.</div>'}</section>
+   <section class="card admin-quick-actions"><div class="admin-section-head"><div><h2>Truy cập nhanh</h2><p class="admin-panel-hint">Các khu vực thường dùng trong quản trị.</p></div></div><a class="admin-quick-action" href="#/admin/users"><span class="admin-action-icon">01</span><span><strong>Tài khoản</strong><small>Tạo, cập nhật và quản lý quyền đăng nhập</small></span><b aria-hidden="true">→</b></a><a class="admin-quick-action" href="#/admin/surveys"><span class="admin-action-icon">02</span><span><strong>Khảo sát</strong><small>Chỉnh sửa khảo sát, chủ sở hữu và phản hồi</small></span><b aria-hidden="true">→</b></a></section></div>
    <section class="card admin-notice"><h2>Quyền quản trị</h2><p>Vai trò admin được kiểm tra từ database ở mọi yêu cầu quản trị. Để cấp quyền, cập nhật cột <code>is_admin</code> trong bảng <code>users</code>.</p></section>`);
  }catch(e){fail('admin',e,()=>adminView(section,surveyId))}
 }

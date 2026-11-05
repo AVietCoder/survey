@@ -44,7 +44,7 @@ backend/
 | `POST /api/public/surveys/:slug/responses` | Gửi phản hồi `{ responseId, answers:[{question_id,value}] }` |
 | `GET /api/responses/survey/:surveyId` | Danh sách phản hồi + trạng thái chất lượng |
 | `GET /api/analytics/overview · /survey/:surveyId` | Tổng quan và thống kê từng câu hỏi |
-| `/api/admin/*` | Khu vực admin: quản lý tài khoản, khảo sát, câu hỏi và phản hồi; mọi endpoint đều kiểm tra `users.is_admin` ở database. Danh sách tài khoản, khảo sát, phản hồi được phân trang 50 mục/trang |
+| `/api/admin/*` | Khu vực admin: quản lý tài khoản, khảo sát, câu hỏi và phản hồi; mọi endpoint đều kiểm tra `users.is_admin` ở database. Tổng quan trả về số liệu tổng hợp cùng 5 tài khoản mới và 5 khảo sát cập nhật gần nhất; danh sách quản trị được phân trang 50 mục/trang |
 
 Các endpoint `/api/admin/*` cần đăng nhập và cờ admin; tài khoản thường nhận `403`. Trang quản trị hỗ trợ tạo/sửa/xóa tài khoản, chuyển chủ sở hữu và sửa/xóa khảo sát, xem/xóa phản hồi cùng nội dung câu trả lời. Để tránh tự cấp quyền, trạng thái `is_admin` chỉ được thay đổi trực tiếp trong database.
 
