@@ -45,7 +45,9 @@ export async function submit(req, res) {
   if (answers.length) ok(await supabase.from('answers').insert(answers.map(a => ({ response_id: resp.id, question_id: a.question_id, answer_value: a.value }))))
   ok(await supabase.from('responses').update({
     submitted_at: now.toISOString(), duration_seconds: duration, quality_status: q.status,
-    quality_score: q.score, signals: q.signals, answer_hash: q.answerHash
+    quality_score: q.score, signals: q.signals, answer_hash: q.answerHash,
+    review_status: 'needs_review',
+    review_note: '', reviewed_at: null, reviewed_by: null
   }).eq('id', resp.id))
   res.status(201).json({ ok: true })   // không trả điểm chất lượng cho người tham gia
 }

@@ -95,6 +95,10 @@ export async function removeUser(req, res) {
     if (error) throw error
     if (count <= 1) throw new HttpError(400, 'Không thể xóa quản trị viên cuối cùng')
   }
+  const { count: ownedProjects, error: projectError } = await supabase.from('research_projects')
+    .select('id', { count: 'exact', head: true }).eq('owner_id', req.params.id)
+  if (projectError) throw projectError
+  if (ownedProjects) throw new HttpError(409, 'Không thể xóa tài khoản đang sở hữu nghiên cứu; hãy chuyển giao hoặc lưu trữ nghiên cứu trước')
   ok(await supabase.from('users').delete().eq('id', req.params.id))
   res.json({ ok: true })
 }

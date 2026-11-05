@@ -1,12 +1,13 @@
 {
-  "name": "lumen-backend",
+  "name": "brainst0rm-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -14,8 +15,12 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "jsonwebtoken": "^9.0.2"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   }
 }

@@ -1,4 +1,4 @@
--- Lumen · schema khởi tạo (chạy trong Supabase → SQL Editor)
+-- brainst0rm · schema khởi tạo (chạy trong Supabase → SQL Editor)
 create table users (
   id uuid primary key default gen_random_uuid(),
   username text not null check (username ~ '^[A-Za-z0-9_]{3,30}$'),

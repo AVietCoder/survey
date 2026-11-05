@@ -25,4 +25,4 @@ app.use(express.static(web))
 
 app.use(errorHandler)
 const port = process.env.PORT || 3000
-app.listen(port, () => console.log(`Lumen chạy tại http://localhost:${port}`))
+app.listen(port, () => console.log(`brainst0rm chạy tại http://localhost:${port}`))

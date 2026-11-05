@@ -3,8 +3,39 @@ import { supabase } from '../config/supabase.js'
 
 const SCALE = ['likert', 'rating', 'sd', 'matrix']
 const sig = (code, weight, message) => ({ code, weight, message })
+const normalize = value => JSON.stringify(value)
+const stableNormalize = value => JSON.stringify(value, (key, item) =>
+  item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map(property => [property, item[property]]))
+    : item)
 
 export const hashIp = ip => crypto.createHash('sha256').update((process.env.IP_SALT || '') + (ip || '')).digest('hex').slice(0, 32)
+
+export function findInconsistentAnswers(questions, answers) {
+  const byId = Object.fromEntries(questions.map(question => [question.id, question]))
+  const answerById = new Map(answers.map(answer => [answer.question_id, answer.value]))
+  const checkedPairs = new Set()
+  const signals = []
+  for (const question of questions) {
+    const check = question.settings?.consistency_check
+    const paired = byId[check?.question_id]
+    if (!paired || paired.id === question.id || paired.question_type !== question.question_type
+      || !['single', 'likert', 'rating'].includes(question.question_type)
+      || !['same', 'different'].includes(check.relation)) continue
+    const pairKey = [question.id, paired.id].sort().join(':')
+    if (checkedPairs.has(pairKey)) continue
+    const pairedCheck = paired.settings?.consistency_check
+    if (pairedCheck?.question_id === question.id && pairedCheck.relation !== check.relation) continue
+    checkedPairs.add(pairKey)
+    if (!answerById.has(question.id) || !answerById.has(paired.id)) continue
+    const matches = stableNormalize(answerById.get(question.id)) === stableNormalize(answerById.get(paired.id))
+    if ((check.relation === 'same' && !matches) || (check.relation === 'different' && matches)) {
+      signals.push(sig('inconsistent', 30,
+        `Câu trả lời không nhất quán giữa "${question.question_text}" và "${paired.question_text}" theo quy tắc researcher đã cấu hình.`))
+    }
+  }
+  return signals
+}
 
 /**
  * Chấm điểm chất lượng 0–100 từ nhiều tín hiệu.
@@ -34,20 +65,34 @@ export async function evaluate({ surveyId, responseId, questions, answers, durat
   if (texts.some(a => /(.)\1{4,}/.test(a.value) || /asdf|qwer|zxcv|jkl;/i.test(a.value)))
     signals.push(sig('gibberish', 20, 'Câu trả lời mở có dấu hiệu vô nghĩa (ký tự lặp hoặc gõ ngẫu nhiên).'))
 
-  // 4. Trùng lặp bộ câu trả lời
+  // 4. Attention checks are explicitly configured by the researcher on a question.
+  for (const q of questions) {
+    const check = q.settings?.attention_check
+    if (!check || check.expected === undefined) continue
+    const answer = answers.find(item => item.question_id === q.id)
+    if (answer && normalize(answer.value) !== normalize(check.expected))
+      signals.push(sig('attention_check', 40, `Không khớp câu trả lời mong đợi ở câu kiểm tra chú ý: "${q.question_text}".`))
+  }
+
+  // Only flag contradictions that the researcher explicitly configured.
+  signals.push(...findInconsistentAnswers(questions, answers))
+
+  // 5. Trùng lặp bộ câu trả lời
   const norm = answers.slice().sort((a, b) => a.question_id.localeCompare(b.question_id)).map(a => [a.question_id, a.value])
   const answerHash = crypto.createHash('sha1').update(JSON.stringify(norm)).digest('hex')
   if (answers.length >= 3) {
-    const { count } = await supabase.from('responses').select('id', { count: 'exact', head: true })
+    const { count, error } = await supabase.from('responses').select('id', { count: 'exact', head: true })
       .eq('survey_id', surveyId).eq('answer_hash', answerHash).not('submitted_at', 'is', null)
+    if (error) throw error
     if (count > 0) signals.push(sig('duplicate', 35, 'Bộ câu trả lời trùng khớp hoàn toàn với một phản hồi khác.'))
   }
 
-  // 5. Tần suất gửi từ cùng thiết bị
+  // 6. Tần suất gửi từ cùng thiết bị
   if (ipHash) {
     const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
-    const { count } = await supabase.from('responses').select('id', { count: 'exact', head: true })
+    const { count, error } = await supabase.from('responses').select('id', { count: 'exact', head: true })
       .eq('survey_id', surveyId).eq('ip_hash', ipHash).gte('started_at', since).neq('id', responseId)
+    if (error) throw error
     if (count >= 2) signals.push(sig('frequency', 30, `Có ${count + 1} phản hồi từ cùng một thiết bị trong 10 phút.`))
   }
 

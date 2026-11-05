@@ -7,6 +7,8 @@ import * as pub from '../controllers/public.js'
 import * as responses from '../controllers/responses.js'
 import * as analytics from '../controllers/analytics.js'
 import * as admin from '../controllers/admin.js'
+import * as researchProjects from '../controllers/research-projects.js'
+import * as exports from '../controllers/exports.js'
 
 // Bọc handler async để lỗi đi vào errorHandler
 const w = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
@@ -33,8 +35,29 @@ p.post('/surveys/:slug/responses', limit(30), w(pub.submit))
 r.use('/public', p)
 
 r.get('/responses/survey/:surveyId', requireAuth, w(responses.listBySurvey))
+r.put('/responses/:responseId/review', requireAuth, w(responses.review))
 r.get('/analytics/overview', requireAuth, w(analytics.overview))
 r.get('/analytics/survey/:surveyId', requireAuth, w(analytics.bySurvey))
+r.post('/analytics/survey/:surveyId/reliability', requireAuth, w(analytics.reliability))
+r.post('/analytics/survey/:surveyId/analysis', requireAuth, w(analytics.relationshipAnalysis))
+r.get('/exports/survey/:surveyId.csv', requireAuth, limit(10), w(exports.surveyCsv))
+r.get('/exports/survey/:surveyId.xlsx', requireAuth, limit(10), w(exports.surveyXlsx))
+
+const rp = Router().use(requireAuth)
+rp.get('/', w(researchProjects.list)).post('/', w(researchProjects.create))
+rp.get('/:id', w(researchProjects.get)).patch('/:id', w(researchProjects.update))
+rp.get('/:id/participants', w(researchProjects.listParticipants))
+rp.post('/:id/participants', w(researchProjects.addParticipant))
+rp.get('/:id/dataset-versions', w(researchProjects.listDatasetVersions))
+rp.post('/:id/dataset-versions', limit(5), w(researchProjects.createDatasetVersion))
+rp.patch('/:id/participants/:participantId', w(researchProjects.updateParticipant))
+rp.post('/:id/members', w(researchProjects.addMember))
+rp.delete('/:id/members/:userId', w(researchProjects.removeMember))
+rp.post('/:id/surveys/:surveyId', w(researchProjects.linkSurvey))
+rp.delete('/:id/surveys/:surveyId', w(researchProjects.unlinkSurvey))
+rp.post('/:id/notes', w(researchProjects.addNote))
+r.use('/research/projects', rp)
+r.get('/research/surveys', requireAuth, w(researchProjects.listAccessibleSurveys))
 
 const ad = Router().use(requireAuth, requireAdmin)
 ad.get('/overview', w(admin.overview))
