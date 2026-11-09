@@ -1,12 +1,11 @@
 /* brainst0rm — frontend (giữ nguyên giao diện, dữ liệu lấy từ API thật) */
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const toast=(m,type)=>{
- const t=$('#toast'),tone=type||(/(chưa|không thể|vui lòng|phải|chọn ít nhất)/i.test(m)?'error':/^Đã /.test(m)?'success':'info');
- t.className='toast on t-'+tone;
- t.innerHTML=`<span class="toast-icon" aria-hidden="true">${svg(tone=='error'?'alert':tone=='success'?'check':'info')}</span><span class="toast-text"></span>`;
- $('.toast-text',t).textContent=m;
- clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),tone=='error'?4200:2600)};
+const toast=(message,type)=>{
+ const text=String(message??'');
+ const tone=type||(/(chưa|không thể|vui lòng|phải|chọn ít nhất|lỗi)/i.test(text)?'error':/^Đã /.test(text)?'success':'info');
+ return window.BrainstormUI.toast(text,tone);
+};
 const confirmAction=(message,title='Xóa khảo sát?',action='Xóa khảo sát')=>new Promise(resolve=>{
  const dialog=document.createElement('dialog');
  dialog.className='confirm-dialog';
@@ -119,6 +118,7 @@ function shell(r,html){
  ${!isAdmin?`<div class="tip"><b>${svg('bulb')}Mẹo thiết kế</b>Nhóm 5–7 câu mỗi trang để giảm mệt mỏi nhận thức.</div>`:''}
  <div class="who"><span class="who-avatar" aria-hidden="true">${profileInitial}</span><span class="who-name"><span>${esc(me.username)}</span><small>${me.is_admin?'Quản trị viên':'Researcher'}</small></span><button id="out" type="button" aria-label="Đăng xuất" title="Đăng xuất">${svg('logout')}</button></div></aside><main class="workspace-main">${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}${credit}</main>`;
  if(isAdmin){
+  $$('.admin-nav-group .nav a').forEach(link=>link.dataset.tooltip=$('span',link)?.textContent.trim()||'');
   const collapsed=localStorage.getItem('brainst0rm-admin-nav-collapsed')=='true';
   app().classList.toggle('nav-collapsed',collapsed);
   const toggle=$('#admin-nav-toggle');
@@ -328,7 +328,7 @@ async function researchView(projectId){
    const previous=select.dataset.currentStatus;
    select.disabled=true;
    try{const result=await api('PATCH',`/research/projects/${project.id}/participants/${select.dataset.participantId}`,{status:select.value});select.dataset.currentStatus=result.participant.status;toast('Đã cập nhật trạng thái participant');await researchView(project.id)}
-   catch(error){select.value=previous;select.disabled=false;toast(error.message,'error')}
+   catch(error){select.value=previous;select.disabled=false;window.BrainstormUI.refreshDropdown(select);toast(error.message,'error')}
   });
   wireParticipantStatuses();
   const moreParticipants=$('#research-participant-more');
@@ -918,7 +918,7 @@ async function analyticsView(id,range={}){
    if(filter){filter.value=responseFilter;filter.onchange=()=>{responseFilter=filter.value;responsePage=0;responseSearch='';search.value='';loadResponsePage(0)}}
    if(search){search.value=responseSearch;search.oninput=()=>{responseSearch=search.value.trim();responsePage=0;$('#response-list').innerHTML=renderResponseList();wireResponseRows()}}
    const reset=$('[data-response-reset]');
-   if(reset)reset.onclick=()=>{responseFilter='all';responseSearch='';responsePage=0;$('#response-review-filter').value='all';$('#response-search').value='';loadResponsePage(0)};
+   if(reset)reset.onclick=()=>{responseFilter='all';responseSearch='';responsePage=0;const filter=$('#response-review-filter');filter.value='all';window.BrainstormUI.refreshDropdown(filter);$('#response-search').value='';loadResponsePage(0)};
    const prev=$('#responses-prev'),next=$('#responses-next');
    if(prev)prev.onclick=()=>loadResponsePage(responsePage-1);
    if(next)next.onclick=()=>loadResponsePage(responsePage+1);
