@@ -105,7 +105,7 @@ function collect(q,root){
 const nav=[['dashboard','Tổng quan','home'],['builder','Trình tạo','edit'],['analytics','Phân tích','chart'],['research','Nghiên cứu','research']];
 function shell(r,html){
  const isAdmin=r=='admin';
- app().className='app'+(isAdmin?' admin-shell':'')+(r=='report'?' report-shell':'');
+ app().className='app page-'+r+(isAdmin?' admin-shell':'')+(r=='report'?' report-shell':'');
  const links=me?.is_admin?[...nav,['admin','Quản trị','shield']]:nav;
  const route=location.hash.replace(/^#\/?/,'').split('?')[0].split('/');
  const adminLabel=route[1]=='users'?'Tài khoản':route[1]=='surveys'?(route[2]?'Chi tiết khảo sát':'Khảo sát'):'Tổng quan';
@@ -117,7 +117,7 @@ function shell(r,html){
  const mainContent=isAdmin?`<div class="admin-topbar"><label class="admin-quick-search" ${searchEnabled?'':'hidden'}><span aria-hidden="true">⌕</span><input id="admin-quick-search" ${searchAttribute} type="search" placeholder="Tìm trong trang hiện tại" aria-label="Tìm trong danh sách hiện tại"></label><div class="admin-topbar-spacer"></div><a class="admin-top-link" href="#/admin/users">Tài khoản</a><a class="admin-top-link" href="#/admin/surveys">Khảo sát</a><div class="admin-profile"><span class="admin-avatar" aria-hidden="true">${profileInitial}</span><span>${esc(me.username)}<small>Quản trị viên</small></span></div></div>${html}<footer class="admin-footer"><span>brainst0rm · Quản trị hệ thống</span><span>Chỉ tài khoản có quyền quản trị được truy cập</span></footer>`:html;
  app().innerHTML=`<aside class="side"><div class="logo"><i></i><span class="brand-word">brainst0rm</span>${isAdmin?'<button type="button" class="admin-nav-toggle" id="admin-nav-toggle" aria-label="Thu gọn thanh điều hướng" aria-expanded="true">‹</button>':''}</div>${navigation}
  ${!isAdmin?`<div class="tip"><b>${svg('bulb')}Mẹo thiết kế</b>Nhóm 5–7 câu mỗi trang để giảm mệt mỏi nhận thức.</div>`:''}
- <div class="who"><span class="who-avatar" aria-hidden="true">${profileInitial}</span><span class="who-name"><span>${esc(me.username)}</span><small>${me.is_admin?'Quản trị viên':'Researcher'}</small></span><button id="out" type="button" aria-label="Đăng xuất" title="Đăng xuất">${svg('logout')}</button></div></aside><main>${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}${credit}</main>`;
+ <div class="who"><span class="who-avatar" aria-hidden="true">${profileInitial}</span><span class="who-name"><span>${esc(me.username)}</span><small>${me.is_admin?'Quản trị viên':'Researcher'}</small></span><button id="out" type="button" aria-label="Đăng xuất" title="Đăng xuất">${svg('logout')}</button></div></aside><main class="workspace-main">${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}${credit}</main>`;
  if(isAdmin){
   const collapsed=localStorage.getItem('brainst0rm-admin-nav-collapsed')=='true';
   app().classList.toggle('nav-collapsed',collapsed);
