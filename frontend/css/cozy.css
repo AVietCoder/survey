@@ -289,6 +289,10 @@ a{color:var(--brand-500)}
 }
 .admin-nav-toggle:hover{background:rgba(255,255,255,.24);color:#fff;border-color:transparent}
 .admin-shell.nav-collapsed>.side{padding-inline:8px}
+/* Viền 1px của CSS cũ làm lộ đường cong sáng ở mép sidebar */
+.app>.side,.admin-shell>.side,.admin-shell.nav-collapsed>.side{border:0}
+/* Khi thu gọn, nhãn nhóm bị ẩn → dùng đường kẻ để tách "Khảo sát" và "Quản trị" */
+.admin-shell.nav-collapsed .admin-nav-group>.nav~.nav{margin-top:12px;padding-top:12px;border-top:2px solid var(--line-on-brand)}
 .admin-shell.nav-collapsed>.side .logo>i{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 32%,#fff 0 13%,var(--amber-300) 14% 58%,var(--amber-600) 100%)}
 .admin-shell.nav-collapsed>.side .logo>i::after{content:none}
 .admin-shell.nav-collapsed .nav a[data-tooltip]::after{
@@ -982,7 +986,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:4px solid #fff
 .toast.t-warning{background:var(--brand-900)}
 .toast.t-warning .toast-icon{background:var(--amber-400);color:var(--amber-ink)}
 .toast.t-info .toast-icon{background:var(--amber-300);color:var(--amber-ink)}
-.toast-progress::after{background:var(--amber-300)}
+.toast-progress{left:18px;right:18px;bottom:7px;height:3px;border-radius:var(--r-pill);background:rgba(255,255,255,.14)}
+.toast-progress::after{background:var(--amber-300);border-radius:inherit}
 
 /* =========================================================
    14. AUTH
