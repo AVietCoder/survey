@@ -23,9 +23,11 @@
 - **Planned:** Consent workflow; đổi mật khẩu, CSRF token và giới hạn số khảo sát/user. Next.js là hướng nâng cấp tùy chọn.
 
 ## 3. UI/UX
-- Giao diện tiếng Việt, HTML/CSS/JavaScript thuần; giữ nhận diện và palette hiện có: nền lavender nhạt, ink navy, iris tím, teal, amber và rose.
-- Thương hiệu hiện tại là **brainst0rm**; tiêu đề và wordmark đã được cập nhật, giữ palette/typography hiện hữu.
-- Font Fraunces cho tiêu đề và Plus Jakarta Sans cho nội dung.
+- Giao diện tiếng Việt, HTML/CSS/JavaScript thuần. **Theme hiện hành: "Cozy Purple"** theo `design-spec-cozy-purple.md` — nền tím `#5B4FD1`, thẻ trắng bo 28px, nút/thẻ "chunky" có cạnh dưới dày, điểm nhấn là vàng hổ phách của spec, nâng nhẹ cho tươi hơn (`#FFBE40`).
+- Theme nằm ở `frontend/css/cozy.css`, nạp **sau** `style.css` (lớp cũ giữ layout, lớp mới thay "da"); bỏ thẻ `<link>` tới `cozy.css` trong `index.html` để quay lại giao diện cũ. Token mới (`--brand-*` là thang tím; `--amber-*` là vàng điểm nhấn; `--edge-*`, `--r-*`) ánh xạ ngược vào token cũ (`--iris`, `--ink`, `--card`…).
+- Màu phụ (cuối `cozy.css`, mục 21): mint, san hô, xanh dương, lilac đi cùng vàng — chỉ cho chi tiết nhỏ (icon, huy hiệu, vạch đầu thẻ, thanh biểu đồ). Vàng giữ cho nút CTA chính và trạng thái "Bản nháp"; chữ luôn là tím than.
+- Điều hướng: sidebar nổi ≥1024px; thanh tab nổi dạng viên thuốc 768–1023px; thanh tab cố định đáy <768px (chỉ CSS, không đổi DOM).
+- Thương hiệu hiện tại là **brainst0rm**; font **Nunito** (500–900) cho toàn bộ giao diện.
 - Admin có sidebar nhóm theo khu vực, thu gọn trên desktop, menu mobile, breadcrumb, topbar tìm kiếm, thông tin quản trị viên và footer.
 - Tổng quan dùng số liệu backend thật; activity feed và quick links không thay bằng dữ liệu giả.
 - Trang tài khoản, khảo sát và phản hồi có tìm kiếm/lọc; bảng có sắp xếp, ẩn/hiện cột, chọn hàng và bulk delete có xác nhận. Có loading, empty/error states và dialog chỉnh sửa tài khoản.
@@ -83,5 +85,5 @@
 - PDF hiện được tạo qua print-to-PDF của trình duyệt, không phải PDF binary do server tạo; không bao gồm free-text answers để giảm rủi ro lộ dữ liệu nhạy cảm.
 - Dataset versions chỉ ghi metadata và HMAC-SHA-256 của responses hoàn tất chưa bị loại; không thể khôi phục dữ liệu. Checksum dùng `JWT_SECRET`, cần giữ ổn định qua các lần chụp; mỗi survey có giới hạn 10.000 phản hồi.
 - brainst0rm chưa ghi nhận consent hoặc xác minh đồng ý của người giám hộ; nhóm nghiên cứu cần xử lý quy trình consent ngoài hệ thống.
-- Giữ palette và ngôn ngữ thiết kế brainst0rm; ưu tiên responsive, keyboard/focus visibility, trạng thái loading/lỗi/rỗng và xác nhận trước thao tác phá hủy.
+- Giữ ngôn ngữ thiết kế Cozy Purple (mục 3) khi thêm màn hình mới — dùng token trong `cozy.css`, không hardcode màu; ưu tiên responsive, keyboard/focus visibility, trạng thái loading/lỗi/rỗng và xác nhận trước thao tác phá hủy.
 - Bí mật cấu hình (`SUPABASE_SERVICE_ROLE_KEY`, JWT secret, IP salt) chỉ đặt ở backend environment; không đưa vào frontend hoặc commit.
