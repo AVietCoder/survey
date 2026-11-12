@@ -38,7 +38,7 @@
 .tk-metrics dd{margin:2px 0 0;color:var(--text);font:800 1.25rem/1.2 var(--font)}
 .tk-metrics dd small{color:var(--text-muted);font:700 .75rem/1.2 var(--font)}
 @media(max-width:420px){.tk-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.tk-hint{color:var(--text-muted);font:600 .875rem/1.5 var(--font)}
+.tk-hint{/*color:var(--text-muted);*/font:600 .875rem/1.5 var(--font)}
 .tk-main>.tk-hint,.tk-hero .tk-hint{color:var(--on-brand-muted)}
 .tk-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:4px}
 .tk-error h2{margin-bottom:8px}
