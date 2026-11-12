@@ -594,7 +594,7 @@ function builderRender(){
  shell('builder',`<div class="head"><div style="flex:1;min-width:260px"><input class="ttl" id="ttl" value="${esc(cur.title)}" maxlength="200" aria-label="Tên khảo sát"><p><span id="sv">Đã lưu</span> · <span id="qcount">${cur.questions.length} câu hỏi</span> · <span class="chip ${SL[cur.status][1]}">${SL[cur.status][0]}</span></p>
  ${cur.status=='published'?`<div class="linkbox"><span>${esc(pubLink())}</span><button id="cp">Sao chép</button></div>`:''}</div>
  <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="seg"><button data-m="edit" class="${mode=='edit'?'on':''}">Chỉnh sửa</button><button data-m="prev" class="${mode=='prev'?'on':''}">Xem trước</button></div>
- <button class="btn text-danger" id="del">${svg('trash')}Xóa</button><button class="btn pri" id="pub">${cur.status=='published'?'Hủy xuất bản':`${svg('send')}Xuất bản`}</button></div></div>
+ <a class="btn" href="#/tracking/${cur.id}">${svg('trend')}Theo dõi</a><button class="btn text-danger" id="del">${svg('trash')}Xóa</button><button class="btn pri" id="pub">${cur.status=='published'?'Hủy xuất bản':`${svg('send')}Xuất bản`}</button></div></div>
  <div class="bld"><div class="lib"><h3>Thư viện câu hỏi</h3><p class="lib-hint">Bấm để thêm vào cuối khảo sát</p>${typeGroups.map(([group,ids])=>`<span class="lib-group">${group}</span>${ids.map(id=>types.find(t=>t[0]==id)).map(t=>`<button type="button" data-add="${t[0]}"><em aria-hidden="true">${t[1]}</em><span>${t[2]}<small>${t[3]}</small></span></button>`).join('')}`).join('')}</div><div id="cv"></div><div class="card" id="pp"></div></div>`);
  $('#ttl').oninput=e=>{cur.title=e.target.value;dirty()};
  $$('[data-add]').forEach(b=>b.onclick=()=>addQuestion(b.dataset.add));
@@ -676,19 +676,19 @@ async function surveyView(slug,previewId){
  let data;
  try{data=previewId?(await api('GET','/surveys/'+previewId)).survey:(await api('GET','/public/surveys/'+encodeURIComponent(slug))).survey}
  catch(e){bare(`<div class="sv"><section><div class="stage error-state" role="alert"><div class="error-mark" aria-hidden="true">!</div><h1>Không mở được khảo sát</h1><p class="hint">${esc(e.message)}</p><button class="btn pri" id="retry-survey">Thử lại</button></div></section></div>`);$('#retry-survey').onclick=()=>surveyView(slug,previewId);return}
- const qs=data.questions,S={i:-1,ans:{},rid:null};
+ const qs=data.questions,S={i:-1,ans:{},rid:null,track:false,result:null};const trk=previewId?null:await Tracking.context(slug);
  const draw=()=>{
   const n=qs.length,w=S.i<0?0:Math.min(S.i,n)/n*100;let inner;
-  if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p><p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
-  else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${previewId?`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`:''}</div>`;
+  if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p>${Tracking.introHtml(trk)}<p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
+  else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.doneHtml(trk,S)}${previewId?`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`:''}</div>`;
   else{const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
   bare(`<div class="sv"><div class="top"><i style="width:${w}%"></i></div><nav>${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':''}</span></nav><section>${inner}</section>${credit}</div>`);
-  const go=$('#go');if(go)go.onclick=async()=>{const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
+  Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
   const st=$('#st');if(!st)return;const q=qs[S.i];
   if(S.ans[q.id]!==undefined)restore(q,st,S.ans[q.id]);
   const next=async()=>{const nextButton=$('#nx');if(nextButton.disabled)return;nextButton.disabled=true;const originalLabel=nextButton.textContent;const v=collect(q,st);if(v===undefined&&q.is_required){nextButton.disabled=false;toast('Vui lòng trả lời câu này để tiếp tục');return}
    if(v!==undefined)S.ans[q.id]=v;else delete S.ans[q.id];
-   if(S.i==qs.length-1){if(!previewId){nextButton.classList.add('is-loading');nextButton.setAttribute('aria-busy','true');nextButton.innerHTML='<span class="spinner" aria-hidden="true"></span>Đang gửi…';try{await api('POST',`/public/surveys/${encodeURIComponent(slug)}/responses`,{responseId:S.rid,answers:Object.entries(S.ans).map(([question_id,value])=>({question_id,value}))})}catch(e){nextButton.disabled=false;nextButton.classList.remove('is-loading');nextButton.removeAttribute('aria-busy');nextButton.textContent=originalLabel;toast(e.message,'error');return}}}
+   if(S.i==qs.length-1){if(!previewId){nextButton.classList.add('is-loading');nextButton.setAttribute('aria-busy','true');nextButton.innerHTML='<span class="spinner" aria-hidden="true"></span>Đang gửi…';try{S.result=await api('POST',`/public/surveys/${encodeURIComponent(slug)}/responses`,{responseId:S.rid,track:S.track===true,answers:Object.entries(S.ans).map(([question_id,value])=>({question_id,value}))})}catch(e){nextButton.disabled=false;nextButton.classList.remove('is-loading');nextButton.removeAttribute('aria-busy');nextButton.textContent=originalLabel;toast(e.message,'error');return}}}
    S.i++;draw()};
   wire(st,()=>{if(['likert','single','image'].includes(q.question_type)&&S.i<qs.length-1)setTimeout(next,420)});
   $('#nx').onclick=next;$('#bk').onclick=()=>{const v=collect(q,st);if(v!==undefined)S.ans[q.id]=v;S.i--;draw()}};
@@ -793,7 +793,7 @@ async function analyticsView(id,range={}){
   const reliabilityItems=a.questions.filter(q=>['likert','rating'].includes(q.type));
   const sectionHead=(title,description,meta='')=>`<div class="section-head"><div><h2>${title}</h2><p>${description}</p></div>${meta?`<span class="section-meta">${meta}</span>`:''}</div>`;
   shell('analytics',`<div class="head"><div><span class="eyebrow">Phân tích</span><h1>${esc(a.survey.title)}</h1><p>${a.completed.toLocaleString('vi')} phản hồi hoàn tất${hasRange?' trong kỳ đã chọn':''} · <span class="chip ${SL[a.survey.status]?.[1]||'c-end'}">${SL[a.survey.status]?.[0]||esc(a.survey.status)}</span></p></div>
-  <div class="head-actions">${canReview?`<button class="btn" type="button" id="jump-export">${svg('download')}Xuất dữ liệu</button>`:''}<a class="btn pri report-link" href="#/report/${encodeURIComponent(id)}${rangeQuery?'?'+rangeQuery:''}">${svg('printer')}Báo cáo PDF</a></div></div>
+  <div class="head-actions"><a class="btn" href="#/tracking/${encodeURIComponent(id)}">${svg('trend')}Theo dõi tiến triển</a>${canReview?`<button class="btn" type="button" id="jump-export">${svg('download')}Xuất dữ liệu</button>`:''}<a class="btn pri report-link" href="#/report/${encodeURIComponent(id)}${rangeQuery?'?'+rangeQuery:''}">${svg('printer')}Báo cáo PDF</a></div></div>
   <div class="analytics-filters" role="group" aria-label="Bộ lọc phân tích"><label>Khảo sát<select class="sel" id="pick">${list.map(s=>`<option value="${s.id}" ${s.id==id?'selected':''}>${esc(s.title)}</option>`).join('')}</select></label><label>Từ ngày<input class="in" type="date" id="analytics-from" value="${esc(range.from||'')}"></label><label>Đến ngày<input class="in" type="date" id="analytics-to" value="${esc(range.to||'')}"></label>${hasRange?'<button class="btn" type="button" data-clear-range>Xóa lọc ngày</button>':'<span class="filter-hint">Ngày theo UTC</span>'}</div>
   <div class="grid g4">${[['Phản hồi',a.completed.toLocaleString('vi'),`${a.started} lượt bắt đầu${hasRange?' trong kỳ':''}`,'inbox',''],['Hoàn thành',a.completionRate+'%',`${a.cohortCompleted} / ${a.started} lượt bắt đầu đã hoàn tất`,'checkCircle','teal'],['Thời gian trung bình',fmt(a.avgDuration),'phút:giây mỗi phản hồi','clock','amber'],['Chất lượng phản hồi',a.normalRate==null?'—':a.normalRate+'%',`${a.review?.needs_review??(Q.suspicious+Q.spam)} cần xem xét · ${a.review?.excluded||0} đã loại`,'shield','rose']].map(k=>kpi(...k)).join('')}</div>
   ${noDataNotice}
@@ -931,6 +931,7 @@ async function analyticsView(id,range={}){
 async function render(){
  const [r,arg,detail]=location.hash.replace(/^#\/?/,'').split('/');
  if(r=='s'&&arg)return surveyView(arg);
+ if(r=='track')return Tracking.participantRoute(arg,detail);
  if(!me){try{me=(await api('GET','/auth/me')).user}catch(e){if(e.status!==401){app().className='app bare';app().innerHTML=`<div class="error-state global-error" role="alert"><div class="error-mark" aria-hidden="true">!</div><h2>Không thể kết nối</h2><p>${esc(e.message||'Vui lòng kiểm tra kết nối rồi thử lại.')}</p><button class="btn pri" id="retry">Thử lại</button></div>`;$('#retry').onclick=render;return}}}
  if(!me)return authView();
  window.scrollTo(0,0);
@@ -949,5 +950,6 @@ async function render(){
   return reportView((arg||'').split('?')[0],{from:query.get('from')||'',to:query.get('to')||''})
  }
  if(r=='research')return researchView(arg);
+ if(r=='tracking')return Tracking.configView(arg);
  return dashboardView()}
 addEventListener('hashchange',render);render();

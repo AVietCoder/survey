@@ -9,6 +9,7 @@ import * as analytics from '../controllers/analytics.js'
 import * as admin from '../controllers/admin.js'
 import * as researchProjects from '../controllers/research-projects.js'
 import * as exports from '../controllers/exports.js'
+import * as trackingCtl from '../controllers/tracking.js'
 
 // Bọc handler async để lỗi đi vào errorHandler
 const w = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
@@ -58,6 +59,29 @@ rp.delete('/:id/surveys/:surveyId', w(researchProjects.unlinkSurvey))
 rp.post('/:id/notes', w(researchProjects.addNote))
 r.use('/research/projects', rp)
 r.get('/research/surveys', requireAuth, w(researchProjects.listAccessibleSurveys))
+
+// Progress Tracking — người tham gia (cookie hồ sơ theo dõi, KHÔNG dùng JWT tài khoản)
+const t = Router()
+t.get('/context/:slug', limit(120), w(trackingCtl.context))
+t.post('/enroll', limit(20), w(trackingCtl.enroll))
+t.post('/recover', limit(10), w(trackingCtl.recover))
+t.use(trackingCtl.requireTracker)
+t.get('/me', limit(200), w(trackingCtl.me))
+t.get('/assessments/:ref', limit(200), w(trackingCtl.assessment))
+t.get('/credentials', limit(60), w(trackingCtl.credentials))
+t.post('/credentials/recovery-code', limit(10), w(trackingCtl.newRecoveryCode))
+t.post('/credentials/recovery-link', limit(10), w(trackingCtl.newRecoveryLink))
+t.delete('/credentials/:credentialId', limit(30), w(trackingCtl.revokeCredential))
+t.post('/signout', w(trackingCtl.signOut))
+t.delete('/profile', limit(10), w(trackingCtl.deleteProfile))
+r.use('/track', t)
+
+// Progress Tracking — cấu hình & số liệu tổng hợp cho owner/researcher/reviewer/admin (quyền khảo sát hiện có)
+const tr = Router().use(requireAuth)
+tr.get('/surveys/:surveyId/config', w(trackingCtl.getConfig))
+tr.put('/surveys/:surveyId/config', limit(60), w(trackingCtl.putConfig))
+tr.get('/surveys/:surveyId/summary', w(trackingCtl.getSummary))
+r.use('/tracking', tr)
 
 const ad = Router().use(requireAuth, requireAdmin)
 ad.get('/overview', w(admin.overview))

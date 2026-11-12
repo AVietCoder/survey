@@ -12,7 +12,9 @@
   - [x] Verified with real QA responses: analytics charts, review row editor, correlation/alpha with date filter, CSV download with SHA-256, report page
   - [x] Responsive check at 1440/820/390px: no horizontal page overflow on Dashboard, Builder, Analytics, Research, Login
   - [x] 23 backend tests, syntax checks, and `git diff --check` pass
+  - [x] Progress Tracking (migration 006, mặc định tắt): hồ sơ ẩn danh bằng cookie/mã/liên kết khôi phục, nhiều assessment, lịch follow-up, lịch sử + so sánh baseline khi thang đo tương thích, consent có phiên bản, cấu hình owner, số liệu tổng hợp cho researcher; 79+ backend tests và hành trình trình duyệt thật trên backend thật với DB giả đều pass
 - **In Progress:**
+  - [ ] Áp dụng migration 006 lên database thật và kiểm thử Progress Tracking end-to-end với dữ liệu thật
   - [ ] Verify Owner/Researcher/Reviewer permissions with a second account
   - [ ] Visual check of Admin screens with an admin account (styles harmonized, not browser-verified)
 - **Pending:**

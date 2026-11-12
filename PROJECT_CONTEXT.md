@@ -19,6 +19,7 @@
 - **Completed (initial):** Báo cáo PDF qua print/save-as-PDF từ trình duyệt, có nguồn, phạm vi ngày, timestamp, thống kê câu hỏi và chú giải phương pháp; không in câu trả lời tự do.
 - **Completed:** Quality checks có thể cấu hình cặp câu trả lời cần giống/khác; cảnh báo là tín hiệu để researcher xem xét, không tự động loại phản hồi.
 - **Completed:** Dataset versioning (migration 005 đã chạy, đã kiểm tra tạo/liệt kê) chỉ lưu thời điểm, survey IDs, số lượng và HMAC checksum; không sao chép hoặc khôi phục câu trả lời.
+- **Completed (code, chưa áp migration 006 lên database thật):** Progress Tracking — người tham gia không cần tài khoản theo dõi điểm qua nhiều lần (cookie + mã khôi phục + liên kết khôi phục một lần), nhiều loại đánh giá riêng, lịch follow-up, lịch sử/so sánh với lần gần nhất và baseline chỉ khi thang đo tương thích, consent có phiên bản, cấu hình cho owner. **Mặc định TẮT** cho mọi khảo sát; không có cấu hình = hành vi cũ.
 - **In Progress:** QA trên phản hồi hoàn tất thực, xác thực phân quyền bằng tài khoản thứ hai và kiểm tra tải file export thực tế.
 - **Planned:** Consent workflow; đổi mật khẩu, CSRF token và giới hạn số khảo sát/user. Next.js là hướng nâng cấp tùy chọn.
 
@@ -55,7 +56,9 @@
 - `backend/src/controllers/exports.js`, `backend/src/services/survey-export.js` — CSV/XLSX response export, authorization, filtering, paging và SHA-256 checksum.
 - `backend/src/services/csv-export.js`, `backend/src/services/xlsx-export.js` — CSV encoding/safety và workbook XLSX.
 - `backend/src/middleware/auth.js` — xác thực và kiểm tra quyền.
-- `backend/migrations/001_init.sql`–`005_dataset_versions.sql` — schema nền, quyền admin, researcher review, quản lý nghiên cứu và metadata dataset versions.
+- `backend/migrations/001_init.sql`–`006_progress_tracking.sql` — schema nền, quyền admin, researcher review, quản lý nghiên cứu, metadata dataset versions và theo dõi tiến triển.
+- `backend/src/controllers/tracking.js`, `backend/src/services/tracking*.js` — Progress Tracking: `tracking.js` (nghiệp vụ, nhận DB qua tham số), `tracking-scoring.js` (chấm điểm, dấu vân tay thang đo, giải thích không tương thích), `tracking-schedule.js`, `tracking-credentials.js` (token, mã khôi phục, HMAC), `tracking-history.js` (lịch sử + so sánh). `frontend/js/tracking.js` + `frontend/css/tracking.css` là giao diện người tham gia (`#/track…`) và cấu hình researcher (`#/tracking/<surveyId>`).
+- `backend/test/tracking-*.test.js`, `backend/test/helpers/fake-db.js` — test logic thuần, service, HTTP, phân quyền và pipeline nộp phản hồi thật trên DB giả trong bộ nhớ.
 - `backend/scripts/seed.js` — seed dữ liệu demo tùy chọn.
 - `backend/test/analytics.test.js` — test thống kê mô tả và Cronbach’s alpha bằng Node test runner.
 - `backend/test/dataset-versions.test.js` — test HMAC checksum ổn định, phát hiện thay đổi dữ liệu/schema và yêu cầu secret ổn định.
@@ -68,10 +71,13 @@
 - **In Progress:** Áp dụng migration 005 và kiểm tra API/UI dataset versioning; hoàn thiện QA tích hợp trên dữ liệu thật có sẵn, role access bằng tài khoản thứ hai và CSV/XLSX/PDF khi có phản hồi hoàn tất.
 - **Known limitations:** Tài khoản hiện tại không có phản hồi hoàn tất để kiểm tra export/review/statistics end-to-end. Chưa xác minh collaboration bằng tài khoản thứ hai. Researcher có thể truy cập phân tích/phản hồi khảo sát được liên kết; Reviewer chỉ đọc. Participant codes không liên kết với responses; xóa user sở hữu nghiên cứu bị chặn để tránh mất quyền sở hữu. Dataset versioning cần migration 005 và chỉ lưu metadata/checksum, không thể khôi phục câu trả lời.
 
+- **Progress Tracking — giới hạn đã biết:** chưa xác minh tuổi/đồng ý của người giám hộ (chỉ tự khai báo 18+); nội dung đồng ý mẫu cần rà soát đạo đức/pháp lý; chưa gửi nhắc lịch (không lưu thông tin liên hệ); một trình duyệt dùng một hồ sơ; giao diện chế độ chỉ-xem của Researcher/Reviewer/Admin mới được kiểm tra bằng test phân quyền, chưa kiểm tra bằng trình duyệt với tài khoản thật.
+
 ## 7. Next Steps
 - **P1 — In Progress:** Chạy migration 005 và kiểm thử tạo/liệt kê dataset version.
 - **P2 — In Progress:** Kiểm thử quyền Owner/Researcher/Reviewer bằng tài khoản thứ hai và review/analytics/export với phản hồi hoàn tất thực.
-- **P3 — Planned:** Xây dựng consent workflow có kiểm soát; hiện hệ thống không ghi nhận consent hoặc xác minh đồng ý của người giám hộ.
+- **P1 — Cần làm:** Chạy migration 006 trên Supabase thật rồi kiểm thử Progress Tracking với dữ liệu thật (tạo cấu hình, hoàn thành khảo sát, đăng ký, khôi phục, so sánh).
+- **P3 — Một phần:** Progress Tracking đã ghi nhận consent có phiên bản cho riêng tính năng theo dõi; vẫn chưa có consent workflow chung cho khảo sát và chưa xác minh đồng ý của người giám hộ.
 
 ## 8. Important Notes
 - Giữ nguyên framework/kiến trúc hiện tại trừ khi có quyết định rõ ràng; không thay đổi API, database, auth hoặc authorization ngoài phạm vi đã thống nhất.
@@ -84,6 +90,7 @@
 - CSV/XLSX mặc định loại responses được xác nhận `excluded`; chỉ Owner/Researcher được xuất, response UUID và network hashes không xuất. CSV có UTF-8 BOM; cả hai định dạng có ngày UTC, survey source/export timestamp và SHA-256 response header. XLSX ghi câu trả lời formula-like dưới dạng text.
 - PDF hiện được tạo qua print-to-PDF của trình duyệt, không phải PDF binary do server tạo; không bao gồm free-text answers để giảm rủi ro lộ dữ liệu nhạy cảm.
 - Dataset versions chỉ ghi metadata và HMAC-SHA-256 của responses hoàn tất chưa bị loại; không thể khôi phục dữ liệu. Checksum dùng `JWT_SECRET`, cần giữ ổn định qua các lần chụp; mỗi survey có giới hạn 10.000 phản hồi.
-- brainst0rm chưa ghi nhận consent hoặc xác minh đồng ý của người giám hộ; nhóm nghiên cứu cần xử lý quy trình consent ngoài hệ thống.
+- brainst0rm chưa xác minh đồng ý của người giám hộ; nhóm nghiên cứu cần xử lý quy trình consent ngoài hệ thống. Ngoại lệ: Progress Tracking tự ghi nhận đồng ý của người tham gia (phiên bản + SHA-256 nội dung hiển thị) trước khi tạo hồ sơ theo dõi.
+- Progress Tracking: session chỉ tham chiếu `responses` (không sao chép câu trả lời); credential chỉ lưu HMAC; researcher không bao giờ thấy định danh hồ sơ; không diễn giải điểm thành tốt/xấu hay chẩn đoán. `TRACKING_TOKEN_SECRET` (hoặc `JWT_SECRET`) phải ổn định. Không sửa tay các bảng `tracking_*` và không public chúng qua RLS.
 - Giữ ngôn ngữ thiết kế Cozy Purple (mục 3) khi thêm màn hình mới — dùng token trong `cozy.css`, không hardcode màu; ưu tiên responsive, keyboard/focus visibility, trạng thái loading/lỗi/rỗng và xác nhận trước thao tác phá hủy.
 - Bí mật cấu hình (`SUPABASE_SERVICE_ROLE_KEY`, JWT secret, IP salt) chỉ đặt ở backend environment; không đưa vào frontend hoặc commit.

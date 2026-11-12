@@ -5,7 +5,7 @@ Express phục vụ luôn thư mục `frontend/` nên chỉ cần chạy **một
 
 ## Chạy thử
 
-1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `005_dataset_versions.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset.
+1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `006_progress_tracking.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset; migration 006 thêm theo dõi tiến triển (xem mục riêng bên dưới, mặc định TẮT).
 2. Cấu hình môi trường:
    ```bash
    cd backend
@@ -87,6 +87,52 @@ where lower(username) = lower('ten_username_cua_ban');
 ```
 
 Tài khoản mới mặc định không phải admin. Cột `is_admin` không thể thay đổi qua form đăng ký hoặc trang quản trị; chỉ chủ database cấp quyền. Đăng xuất rồi đăng nhập lại (hoặc tải lại ứng dụng) để làm mới trạng thái quyền.
+
+## Theo dõi tiến triển (Progress Tracking)
+
+Cho phép người tham gia **không cần tài khoản** theo dõi điểm của cùng một khảo sát qua nhiều lần, xem lịch sử, biểu đồ và so sánh với lần gần nhất / lần đầu (baseline). **Mặc định TẮT**: khảo sát chỉ dùng tính năng khi owner bật trong trang cấu hình; khảo sát cũ hoạt động y như trước, kể cả khi chưa chạy migration 006.
+
+### Bật cho một khảo sát (owner)
+1. Chạy `backend/migrations/006_progress_tracking.sql` trong Supabase SQL Editor. Không sửa bảng cũ; chỉ thêm 5 bảng, bật RLS không policy và thu hồi quyền `anon`/`authenticated`.
+2. Trong **Trình tạo** hoặc **Phân tích** bấm **Theo dõi** → trang `#/tracking/<surveyId>`.
+3. Điền: tên + mã loại đánh giá, cách tính điểm (tổng hoặc trung bình các câu Likert/đánh giá sao hoặc thanh trượt cùng thang, có thể đảo chiều), phiên bản thang điểm, lịch (khoảng cách giữa các lần, ngày nhắc trước hạn, thời gian chờ trước khi quá hạn, số lần tối đa), nội dung đồng ý, rồi bật.
+4. Chỉ **owner** được sửa cấu hình. Researcher và Reviewer (theo quyền khảo sát hiện có) và Admin chỉ xem cấu hình và số liệu tổng hợp.
+
+Biến môi trường tùy chọn: `TRACKING_TOKEN_SECRET` (khóa HMAC cho credential theo dõi; nếu thiếu dùng `JWT_SECRET`). **Giữ ổn định**: đổi khóa sẽ làm mọi cookie và mã khôi phục hiện có mất hiệu lực.
+
+### Luồng người tham gia
+- **Sau khi hoàn thành** khảo sát có bật theo dõi, người tham gia được mời tạo hồ sơ: đọc nội dung đồng ý (có phiên bản), tự xác nhận từ 18 tuổi (nếu owner yêu cầu) và đồng ý. Hệ thống tạo hồ sơ ẩn danh, đặt cookie `bs_track` (httpOnly, SameSite=Lax, Secure khi production, 365 ngày) và hiển thị **mã khôi phục một lần**.
+- **Quay lại**: lần sau cùng trình duyệt, intro khảo sát hiện ô "Lưu kết quả lần này"; kết quả được gắn ngay khi nộp. Mất cookie hoặc đổi thiết bị: `#/track/recover` bằng mã khôi phục hoặc liên kết khôi phục (dùng một lần, 30 ngày).
+- **Dashboard** `#/track`: mỗi loại đánh giá có lịch sử, biểu đồ và lịch riêng, không bao giờ gộp điểm khác loại. Quản lý thiết bị, tạo mã/liên kết mới, thu hồi, đăng xuất và **xóa hồ sơ** (xóa lần đo; phản hồi gửi cho researcher vẫn giữ ở dạng ẩn danh).
+
+### Quy tắc so sánh (không kết luận quá mức)
+- Chỉ so sánh các lần đo cùng **chủ khảo sát + mã loại** và cùng **dấu vân tay thang đo** (cách tính, số câu, khoảng giá trị, câu đảo chiều, phiên bản). Khác một yếu tố: hiển thị lý do bằng tiếng Việt và không tính toán.
+- Thiếu hoặc ngoài thang ở bất kỳ câu nào → lần đo không có điểm (không ước lượng). Phản hồi bị researcher đánh dấu `excluded` không dùng để so sánh (không nêu lý do cho người tham gia).
+- Kết quả chỉ là chênh lệch số học ("cao hơn/thấp hơn X điểm") kèm mô tả ý nghĩa điểm do researcher viết. **Không** có ngưỡng, nhãn tốt/xấu, chẩn đoán hay khuyến nghị lâm sàng.
+
+### Lịch theo dõi
+Tính từ cấu hình và lần đo gần nhất: `upcoming` (chưa đến hạn), `due_soon`, `due`, `overdue`, `completed` (đủ số lần), `unscheduled`. Chỉ là thông tin: khảo sát không bị khóa, người tham gia làm sớm hoặc muộn được. Hệ thống **không** gửi email/tin nhắn nhắc lịch (không lưu thông tin liên hệ).
+
+### Bảo mật và quyền riêng tư
+- Credential là token ngẫu nhiên 256-bit (cookie, liên kết) hoặc mã 16 ký tự (~79 bit); chỉ lưu **HMAC-SHA-256**, có hạn dùng, thu hồi được. Không dùng participant code của Research Management. Rate limit: recover 10, enroll 20, tạo credential 10 yêu cầu / 15 phút / IP. Lỗi khôi phục luôn cùng một thông điệp.
+- Session chỉ **tham chiếu** `responses` (unique `response_id`, nên một phản hồi tối đa một session), không sao chép câu trả lời. Gắn muộn chỉ trong 2 giờ sau khi nộp.
+- Mọi truy vấn của người tham gia lọc theo hồ sơ từ cookie; ID trong URL không cho phép xem dữ liệu người khác. Researcher chỉ thấy số liệu tổng hợp (không có định danh hồ sơ); điểm trung bình theo lần bị ẩn khi dưới 5 người.
+- Consent lưu phiên bản và SHA-256 của nội dung đã hiển thị. Sửa nội dung → tăng phiên bản → người tham gia được hỏi lại trước lần lưu tiếp theo.
+- **Chưa có / cần chủ sản phẩm xác nhận trước khi dùng thật**: xác minh tuổi hoặc đồng ý của người giám hộ (hiện chỉ tự khai báo 18+), phê duyệt đạo đức/pháp lý cho nội dung đồng ý (mẫu trong giao diện chỉ để tham khảo), chính sách lưu trữ và xóa theo yêu cầu phía researcher.
+
+### API
+| | |
+|---|---|
+| `GET /api/track/context/:slug` | Công khai: khảo sát có bật theo dõi không, nội dung đồng ý, trạng thái hồ sơ/đồng ý của chính trình duyệt này |
+| `POST /api/track/enroll` | `{slug, responseId, consent}` tạo/gắn hồ sơ cho một phản hồi vừa hoàn tất; trả mã khôi phục một lần |
+| `POST /api/track/recover` | `{credential}` mã hoặc liên kết khôi phục → đặt cookie mới |
+| `GET /api/track/me`, `GET /api/track/assessments/:ref` | Tổng quan và chi tiết (lịch sử, so sánh, biểu đồ, lịch); cần cookie hồ sơ |
+| `GET/POST/DELETE /api/track/credentials…`, `POST /api/track/signout`, `DELETE /api/track/profile` | Quản lý thiết bị, mã/liên kết khôi phục, đăng xuất, xóa hồ sơ |
+| `POST /api/public/surveys/:slug/responses` | Thêm tùy chọn `track: true` để gắn session ngay khi nộp (cần cookie hợp lệ và đã đồng ý bản hiện tại); trả thêm `responseId` và `tracking.status`. Lỗi tracking không bao giờ làm hỏng việc nộp phản hồi |
+| `GET/PUT /api/tracking/surveys/:surveyId/config` | Đọc cấu hình (Owner/Researcher/Reviewer/Admin) hoặc ghi (chỉ Owner) |
+| `GET /api/tracking/surveys/:surveyId/summary` | Số liệu tổng hợp cho researcher |
+
+Giới hạn hiện tại: một trình duyệt dùng một hồ sơ cho mọi khảo sát có bật theo dõi (qua cookie); một hồ sơ nhiều thiết bị cần khôi phục bằng mã. Gắn kết quả trong tab ẩn danh hoặc sau khi xóa cookie cần mã khôi phục để nối lại.
 
 ## Chất lượng và researcher review (`services/quality.js`)
 Mỗi tín hiệu trừ điểm từ 100: hoàn thành quá nhanh (35), trùng bộ đáp án (35), chọn cùng một đáp án ở mọi câu thang đo (30), câu trả lời không nhất quán theo cặp câu researcher cấu hình (30), gửi liên tục từ một thiết bị trong 10 phút (30), văn bản vô nghĩa (20), sai câu attention check (40).

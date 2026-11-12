@@ -2,9 +2,11 @@ import { supabase, ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
 import { loadQuestions } from '../services/surveys.js'
 import { evaluate, hashIp } from '../services/quality.js'
+import { tracking } from './tracking.js'
+import { COOKIE_NAME } from '../services/tracking-credentials.js'
 
 async function published(slug) {
-  const s = ok(await supabase.from('surveys').select('id,title,description,settings,status').eq('public_slug', slug).maybeSingle())
+  const s = ok(await supabase.from('surveys').select('id,user_id,title,description,settings,status').eq('public_slug', slug).maybeSingle())
   if (!s || s.status !== 'published') throw new HttpError(404, 'Khảo sát không tồn tại hoặc đã đóng')
   return s
 }
@@ -49,5 +51,11 @@ export async function submit(req, res) {
     review_status: 'needs_review',
     review_note: '', reviewed_at: null, reviewed_by: null
   }).eq('id', resp.id))
-  res.status(201).json({ ok: true })   // không trả điểm chất lượng cho người tham gia
+  // Progress Tracking (mặc định tắt): chỉ khi client yêu cầu `track: true`. Không bao giờ làm hỏng việc nộp phản hồi.
+  const trackingResult = req.body.track === true
+    ? await tracking.attachForSubmit({
+      survey: s, response: { id: resp.id, submitted_at: now.toISOString() }, answers, cookieToken: req.cookies?.[COOKIE_NAME]
+    })
+    : null
+  res.status(201).json({ ok: true, responseId: resp.id, ...(trackingResult ? { tracking: trackingResult } : {}) })   // không trả điểm chất lượng cho người tham gia
 }
