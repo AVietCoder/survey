@@ -156,8 +156,8 @@ function authView(){
  let mode='login';
  const draw=()=>{app().className='app bare';app().innerHTML=`<div class="auth">
  <aside class="auth-panel"><div class="logo"><i></i><span class="brand-word">brainst0rm</span></div>
-  <div><h1>Vào đây làm gì???</h1><p>brainst0rm · sigma lazada sahara đừng rời xa nhau nha:??</p>
-  <ul class="auth-points"><li>${svg('check')}<span>Giao diện siêu siêu siêu đẹp</span></li><li>${svg('check')}<span>Tính năng siêu cấp đỉnh nóc kịch trần bay phấp phới</span></li><li>${svg('check')}<span>Siêu cấp vuýp pro hihhihihehe :33</span></li></ul></div>
+  <div><h1>Không phận sự miễn vào !!</h1><p>brainst0rm · sigma lazada sahara đừng rời xa nhau nha:??</p>
+  <ul class="auth-points"><li>${svg('check')}<span>Giao diện đẹp tới mức chill guy cũng phải bỏ tay khỏi túi quần</span></li><li>${svg('check')}<span>Tính năng siêu cấp đỉnh nóc kịch trần bay phấp phới</span></li><li>${svg('check')}<span>Mời đoàn mình di chuyển lên núi giúp em để bắt đầu brainstorm</span></li></ul></div>
   <small>Nền tảng dành cho người bá khí · brainst0rm</small></aside>
  <main class="auth-main"><form class="card auth-card" id="auth-form" novalidate><h2>${mode=='login'?'Đăng nhập':'Tạo tài khoản'}</h2><p class="sub">${mode=='login'?'Chúc các quý cô bá khí làm việc thật năng suất, hiệu quả':'Bắt đầu thiết kế khảo sát đầu tiên trong vài phút.'}</p>
  <label for="u">Username<input class="in" id="u" placeholder="ví dụ: user1234" autocomplete="username" maxlength="30" required></label>
@@ -165,7 +165,7 @@ function authView(){
  <div class="err" id="e" role="alert"></div><button class="btn pri" id="go" type="submit">${mode=='login'?'Đăng nhập':'Đăng ký'}</button>
  </form>${credit}</main></div>`;
   $('#pw-toggle').onclick=()=>{const input=$('#p'),show=input.type=='password';input.type=show?'text':'password';$('#pw-toggle').setAttribute('aria-pressed',String(show));$('#pw-toggle').setAttribute('aria-label',show?'Ẩn mật khẩu':'Hiện mật khẩu')};
-  const go=async()=>{const button=$('#go');if(button.disabled)return;const restore=setButtonLoading(button,mode=='login'?'Đang đăng nhập…':'Đang đăng ký…');try{$('#e').textContent='';$('#u').removeAttribute('aria-invalid');$('#p').removeAttribute('aria-invalid');const r=await api('POST',mode=='login'?'/auth/login':'/auth/register',{username:$('#u').value,password:$('#p').value});me=r.user;location.hash='#/dashboard';render()}catch(e){restore();$('#e').textContent=e.message;$('#u').setAttribute('aria-invalid','true');$('#p').setAttribute('aria-invalid','true')}};
+  const go=async()=>{const button=$('#go');if(button.disabled)return;const restore=setButtonLoading(button,mode=='login'?'Đang đăng nhập…':'Đang đăng ký…');try{$('#e').textContent='';$('#u').removeAttribute('aria-invalid');$('#p').removeAttribute('aria-invalid');const r=await api('POST',mode=='login'?'/auth/login':'/auth/register',{username:$('#u').value,password:$('#p').value});me=r.user;location.hash='#/dashboard';render()}catch(e){restore();$('#e').textContent=e.status===401?'Biết là muốn đăng nhập lắm rồi nhưng mà để ý nhập đúng mật mã siêu bá một tý :33':e.message;$('#u').setAttribute('aria-invalid','true');$('#p').setAttribute('aria-invalid','true')}};
   $('#auth-form').onsubmit=e=>{e.preventDefault();go()};$('#u').focus()};
  draw()}
 
