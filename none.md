@@ -5,7 +5,7 @@ Express phục vụ luôn thư mục `frontend/` nên chỉ cần chạy **một
 
 ## Chạy thử
 
-1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `006_progress_tracking.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset; migration 006 thêm theo dõi tiến triển (xem mục riêng bên dưới, mặc định TẮT).
+1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `006_progress_tracking.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset; migration 006 thêm theo dõi tiến triển (xem mục riêng bên dưới, mặc định TẮT); migration 007 thêm nhật ký hoạt động cho admin (bảng `activity_logs`).
 2. Cấu hình môi trường:
    ```bash
    cd backend
@@ -155,3 +155,11 @@ Mỗi tín hiệu trừ điểm từ 100: hoàn thành quá nhanh (35), trùng b
 
 ## Nâng cấp sau này
 Next.js: giữ nguyên `backend/`, bỏ đoạn `express.static` trong `app.js`, đặt `CORS_ORIGIN` và gọi API với `credentials: 'include'`. Chưa có (cố ý, theo MVP): đổi mật khẩu, CSRF token (cookie `sameSite=lax` đủ cho MVP), giới hạn số khảo sát mỗi user. API phản hồi hiện phân trang 25 mục/trang.
+
+
+## Quản trị, nhật ký hoạt động và bảng phản hồi
+
+- **Cấp/thu hồi admin**: trong Quản trị → Tài khoản → Chỉnh sửa có công tắc "Quyền quản trị viên". Không thể tự thu hồi quyền của chính mình hoặc của admin cuối cùng; mọi thay đổi được ghi vào nhật ký.
+- **Nhật ký hoạt động** (Quản trị → Nhật ký, chỉ admin): đăng nhập/đăng xuất/đăng ký, tạo-sửa-xóa tài khoản, cấp/thu hồi admin, tạo/xuất bản/xóa khảo sát, đánh giá/xóa phản hồi, xuất CSV/XLSX. Lọc theo người thực hiện, nhóm hành động, khoảng ngày; phân trang 50 dòng. Không lưu mật khẩu, token hay mã khôi phục; IP chỉ lưu dạng băm. Ghi log lỗi không bao giờ làm hỏng thao tác chính. Cần chạy `backend/migrations/007_activity_logs.sql`; khi chưa chạy, trang Nhật ký hiển thị gợi ý (HTTP 503) và phần còn lại vẫn hoạt động.
+- **Bảng phản hồi (Phân tích)**: lọc phía server theo trạng thái review, cờ tự động, khoảng ngày, khoảng điểm chất lượng (0–100), sắp xếp theo thời điểm/thời gian/điểm. Ô "Tìm kiếm trong trang" vẫn chỉ lọc trên trang đang hiển thị.
+- **Danh sách khảo sát của admin**: thêm lọc theo ngày cập nhật (`?from=&to=`), `status`, `q` ở API.

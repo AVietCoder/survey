@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { logActivity } from '../services/activity.js'
 import { createCsvFile } from '../services/csv-export.js'
 import { loadSurveyExport } from '../services/survey-export.js'
 import { createXlsx } from '../services/xlsx-export.js'
@@ -21,12 +22,14 @@ function sendExport(res, survey, exportedAt, content, extension, contentType) {
 
 export async function surveyCsv(req, res) {
   const { survey, exportedAt, headers, rows } = await loadSurveyExport(req.params.surveyId, req.user.id, req.query)
+  await logActivity(req, 'export.csv', { type: 'survey', id: survey.id, label: survey.title }, { rows: rows.length })
   sendExport(res, survey, exportedAt, createCsvFile(headers, rows), 'csv', 'text/csv; charset=utf-8')
 }
 
 export async function surveyXlsx(req, res) {
   const { survey, exportedAt, headers, rows } = await loadSurveyExport(req.params.surveyId, req.user.id, req.query)
   const content = await createXlsx(headers, rows, exportedAt)
+  await logActivity(req, 'export.xlsx', { type: 'survey', id: survey.id, label: survey.title }, { rows: rows.length })
   sendExport(res, survey, exportedAt, content, 'xlsx',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 }

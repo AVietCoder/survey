@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt'
 import { supabase, ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
+import { listActivity, logActivity } from '../services/activity.js'
+import { applyDateRange, getDateRange } from '../services/date-range.js'
 import { loadQuestions, newSlug, saveQuestions, withQuestions } from '../services/surveys.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -70,6 +72,7 @@ export async function createUser(req, res) {
   const user = ok(await supabase.from('users').insert({
     username, password_hash: await bcrypt.hash(password, 10)
   }).select('id,username,is_admin,created_at').single())
+  await logActivity(req, 'user.create', { type: 'user', id: user.id, label: user.username })
   res.status(201).json({ user })
 }
 
@@ -78,10 +81,36 @@ export async function updateUser(req, res) {
   const patch = {}
   if (req.body.username !== undefined) patch.username = cleanUsername(req.body.username)
   if (req.body.password) patch.password_hash = await bcrypt.hash(cleanPassword(req.body.password), 10)
-  if (!Object.keys(patch).length) throw new HttpError(400, 'Không có thông tin cần cập nhật')
+  let adminChange = null
+  if (req.body.is_admin !== undefined) {
+    if (typeof req.body.is_admin !== 'boolean') throw new HttpError(400, 'Quyền admin không hợp lệ')
+    const target = ok(await supabase.from('users').select('id,is_admin').eq('id', req.params.id).maybeSingle())
+    if (!target) throw new HttpError(404, 'Không tìm thấy tài khoản')
+    if (Boolean(target.is_admin) !== req.body.is_admin) {
+      if (!req.body.is_admin) {
+        if (req.params.id === req.user.id) throw new HttpError(400, 'Không thể tự thu hồi quyền admin của chính mình')
+        const { count, error } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_admin', true)
+        if (error) throw error
+        if (count <= 1) throw new HttpError(400, 'Không thể thu hồi quyền của quản trị viên cuối cùng')
+      }
+      patch.is_admin = req.body.is_admin
+      adminChange = req.body.is_admin ? 'user.grant_admin' : 'user.revoke_admin'
+    }
+  }
+  if (!Object.keys(patch).length) {
+    if (req.body.is_admin !== undefined) {
+      const same = ok(await supabase.from('users').select('id,username,is_admin,created_at').eq('id', req.params.id).maybeSingle())
+      return res.json({ user: same })
+    }
+    throw new HttpError(400, 'Không có thông tin cần cập nhật')
+  }
   const user = ok(await supabase.from('users').update(patch).eq('id', req.params.id)
     .select('id,username,is_admin,created_at').maybeSingle())
   if (!user) throw new HttpError(404, 'Không tìm thấy tài khoản')
+  const target = { type: 'user', id: user.id, label: user.username }
+  if (adminChange) await logActivity(req, adminChange, target)
+  const fields = ['username', 'password_hash'].filter(key => key in patch).map(key => key === 'password_hash' ? 'password' : key)
+  if (fields.length) await logActivity(req, 'user.update', target, { fields })
   res.json({ user })
 }
 
@@ -99,17 +128,27 @@ export async function removeUser(req, res) {
     .select('id', { count: 'exact', head: true }).eq('owner_id', req.params.id)
   if (projectError) throw projectError
   if (ownedProjects) throw new HttpError(409, 'Không thể xóa tài khoản đang sở hữu nghiên cứu; hãy chuyển giao hoặc lưu trữ nghiên cứu trước')
+  const removed = ok(await supabase.from('users').select('username').eq('id', req.params.id).maybeSingle())
   ok(await supabase.from('users').delete().eq('id', req.params.id))
+  await logActivity(req, 'user.delete', { type: 'user', id: req.params.id, label: removed?.username })
   res.json({ ok: true })
 }
 
 export async function listSurveys(req, res) {
   const page = pageNumber(req.query.page)
-  const surveys = ok(await supabase.from('surveys')
-    .select('id,user_id,title,description,status,public_slug,created_at,updated_at')
-    .order('updated_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1))
-  const { count, error: countError } = await supabase.from('surveys').select('id', { count: 'exact', head: true })
-  if (countError) throw countError
+  const range = getDateRange(req.query)
+  const status = String(req.query.status || '')
+  const text = String(req.query.q || '').trim().replace(/[%,()*]/g, ' ').slice(0, 80)
+  if (status && !STATUSES.includes(status)) throw new HttpError(400, 'Trạng thái không hợp lệ')
+  let request = supabase.from('surveys')
+    .select('id,user_id,title,description,status,public_slug,created_at,updated_at', { count: 'exact' })
+  request = applyDateRange(request, range, 'updated_at')
+  if (status) request = request.eq('status', status)
+  if (text) request = request.ilike('title', `%${text}%`)
+  const listed = await request.order('updated_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+  if (listed.error) throw listed.error
+  const surveys = listed.data
+  const count = listed.count
   const ids = surveys.map(s => s.id)
   const userIds = [...new Set(surveys.map(s => s.user_id))]
   const users = userIds.length
@@ -150,6 +189,7 @@ export async function createSurvey(req, res) {
     public_slug: newSlug()
   }).select('*').single())
   if (Array.isArray(req.body.questions)) await saveQuestions(survey.id, req.body.questions)
+  await logActivity(req, 'survey.create', { type: 'survey', id: survey.id, label: survey.title }, { by: 'admin', owner: userId })
   res.status(201).json({ survey: await withQuestions(survey) })
 }
 
@@ -179,14 +219,17 @@ export async function updateSurvey(req, res) {
     ? ok(await supabase.from('surveys').update(patch).eq('id', current.id).select('*').single())
     : current
   const user = ok(await supabase.from('users').select('username').eq('id', survey.user_id).maybeSingle())
+  const fields = [...Object.keys(patch), ...(Array.isArray(body.questions) ? ['questions'] : [])]
+  if (fields.length) await logActivity(req, patch.status === 'published' && current.status !== 'published' ? 'survey.publish' : 'survey.update', { type: 'survey', id: current.id, label: survey.title }, { by: 'admin', fields })
   res.json({ survey: { ...(await withQuestions(survey)), owner: user?.username || 'Không rõ' } })
 }
 
 export async function removeSurvey(req, res) {
   validId(req.params.id)
-  const survey = ok(await supabase.from('surveys').select('id').eq('id', req.params.id).maybeSingle())
+  const survey = ok(await supabase.from('surveys').select('id,title').eq('id', req.params.id).maybeSingle())
   if (!survey) throw new HttpError(404, 'Không tìm thấy khảo sát')
   ok(await supabase.from('surveys').delete().eq('id', req.params.id))
+  await logActivity(req, 'survey.delete', { type: 'survey', id: req.params.id, label: survey.title }, { by: 'admin' })
   res.json({ ok: true })
 }
 
@@ -208,5 +251,10 @@ export async function removeResponse(req, res) {
   const response = ok(await supabase.from('responses').select('id').eq('id', req.params.id).maybeSingle())
   if (!response) throw new HttpError(404, 'Không tìm thấy phản hồi')
   ok(await supabase.from('responses').delete().eq('id', req.params.id))
+  await logActivity(req, 'response.delete', { type: 'response', id: req.params.id }, { by: 'admin' })
   res.json({ ok: true })
+}
+
+export async function activity(req, res) {
+  res.json(await listActivity(req.query))
 }

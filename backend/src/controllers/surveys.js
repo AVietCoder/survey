@@ -1,5 +1,6 @@
 import { supabase, ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
+import { logActivity } from '../services/activity.js'
 import { getOwned, withQuestions, saveQuestions, newSlug } from '../services/surveys.js'
 
 const STATUSES = ['draft', 'published', 'archived']
@@ -24,6 +25,7 @@ export async function create(req, res) {
     description: String(description || '').slice(0, 1000), public_slug: newSlug()
   }).select('*').single())
   if (Array.isArray(req.body.questions)) await saveQuestions(survey.id, req.body.questions)
+  await logActivity(req, 'survey.create', { type: 'survey', id: survey.id, label: survey.title })
   res.status(201).json({ survey: await withQuestions(survey) })
 }
 
@@ -46,11 +48,13 @@ export async function update(req, res) {
   if (patch.status === 'published' && !full.questions.length) throw new HttpError(400, 'Cần ít nhất 1 câu hỏi để xuất bản')
   const survey = Object.keys(patch).length
     ? ok(await supabase.from('surveys').update(patch).eq('id', cur.id).select('*').single()) : cur
+  if (patch.status && patch.status !== cur.status) await logActivity(req, patch.status === 'published' ? 'survey.publish' : 'survey.update', { type: 'survey', id: cur.id, label: survey.title }, { status: patch.status })
   res.json({ survey: await withQuestions(survey) })
 }
 
 export async function remove(req, res) {
   const s = await getOwned(req.params.id, req.user.id)
   ok(await supabase.from('surveys').delete().eq('id', s.id))
+  await logActivity(req, 'survey.delete', { type: 'survey', id: s.id, label: s.title })
   res.json({ ok: true })
 }

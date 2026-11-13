@@ -74,8 +74,7 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
       let rows = this.matches()
       for (const [column, ascending] of [...this.sort].reverse())
         rows = [...rows].sort((a, b) => (a[column] > b[column] ? 1 : a[column] < b[column] ? -1 : 0) * (ascending ? 1 : -1))
-      if (this.max !== null) rows = rows.slice(this.offset, this.offset + this.max)
-      return { ...this.shape(rows), count: rows.length }
+      return { ...this.shape(rows.slice(this.offset, this.offset + (this.max ?? rows.length))), count: rows.length }
     }
     then(resolve, reject) { return Promise.resolve(this.run()).then(resolve, reject) }
   }

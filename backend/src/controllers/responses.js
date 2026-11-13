@@ -1,9 +1,19 @@
 import { supabase, ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
+import { logActivity } from '../services/activity.js'
 import { getSurveyAccess } from '../services/research-projects.js'
 import { applyDateRange, getDateRange } from '../services/date-range.js'
 
 const REVIEW_STATUSES = ['needs_review', 'accepted', 'excluded']
+const QUALITY_STATUSES = ['normal', 'suspicious', 'spam']
+const SORTS = ['submitted_at', 'quality_score', 'duration_seconds']
+
+function optionalNumber(value, label) {
+  if (value === undefined || value === '') return null
+  const number = Number(value)
+  if (!Number.isFinite(number) || number < 0) throw new HttpError(400, `${label} không hợp lệ`)
+  return number
+}
 
 export async function listBySurvey(req, res) {
   const { survey: s, role } = await getSurveyAccess(req.params.surveyId, req.user.id)
@@ -12,11 +22,23 @@ export async function listBySurvey(req, res) {
   const range = getDateRange(req.query)
   if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Trang không hợp lệ')
   if (status && !REVIEW_STATUSES.includes(status)) throw new HttpError(400, 'Trạng thái đánh giá không hợp lệ')
+  const quality = String(req.query.quality || '')
+  if (quality && !QUALITY_STATUSES.includes(quality)) throw new HttpError(400, 'Mức chất lượng không hợp lệ')
+  const minScore = optionalNumber(req.query.minScore, 'Điểm tối thiểu')
+  const maxScore = optionalNumber(req.query.maxScore, 'Điểm tối đa')
+  if (minScore !== null && maxScore !== null && minScore > maxScore) throw new HttpError(400, 'Điểm tối thiểu phải nhỏ hơn hoặc bằng điểm tối đa')
+  const sort = req.query.sort === undefined ? 'submitted_at' : String(req.query.sort)
+  if (!SORTS.includes(sort)) throw new HttpError(400, 'Cột sắp xếp không hợp lệ')
+  const ascending = req.query.dir === 'asc'
   const pageSize = 25
   let query = applyDateRange(supabase.from('responses')
     .select('id, started_at, submitted_at, duration_seconds, quality_status, quality_score, signals, review_status, review_note, reviewed_at', { count: 'exact' })
-    .eq('survey_id', s.id).not('submitted_at', 'is', null), range).order('submitted_at', { ascending: false })
+    .eq('survey_id', s.id).not('submitted_at', 'is', null), range).order(sort, { ascending })
+  if (sort !== 'submitted_at') query = query.order('submitted_at', { ascending: false })
   if (status) query = query.eq('review_status', status)
+  if (quality) query = query.eq('quality_status', quality)
+  if (minScore !== null) query = query.gte('quality_score', minScore)
+  if (maxScore !== null) query = query.lte('quality_score', maxScore)
   const result = await query.range((page - 1) * pageSize, page * pageSize - 1)
   const responses = ok(result)
   res.json({ responses, total: result.count, page, pageSize, canReview: role !== 'reviewer' })
@@ -41,5 +63,6 @@ export async function review(req, res) {
     review_status: status, review_note: note, reviewed_at: reviewedAt, reviewed_by: reviewedBy
   }).eq('id', response.id)
     .select('id,review_status,review_note,reviewed_at').single())
+  await logActivity(req, 'response.review', { type: 'response', id: response.id, label: response.survey_id }, { status })
   res.json({ response: updated })
 }

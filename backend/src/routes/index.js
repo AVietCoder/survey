@@ -85,6 +85,7 @@ r.use('/tracking', tr)
 
 const ad = Router().use(requireAuth, requireAdmin)
 ad.get('/overview', w(admin.overview))
+ad.get('/activity', w(admin.activity))
 ad.get('/users/search', w(admin.searchUsers))
 ad.get('/users', w(admin.listUsers)).post('/users', limit(20), w(admin.createUser))
 ad.put('/users/:id', w(admin.updateUser)).delete('/users/:id', w(admin.removeUser))
