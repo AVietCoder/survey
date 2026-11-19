@@ -14,7 +14,10 @@
   - [x] 23 backend tests, syntax checks, and `git diff --check` pass
   - [x] Progress Tracking (migration 006, mặc định tắt): hồ sơ ẩn danh bằng cookie/mã/liên kết khôi phục, nhiều assessment, lịch follow-up, lịch sử + so sánh baseline khi thang đo tương thích, consent có phiên bản, cấu hình owner, số liệu tổng hợp cho researcher; 79+ backend tests và hành trình trình duyệt thật trên backend thật với DB giả đều pass
   - [x] Admin: cấp/thu hồi admin trên UI, nhật ký hoạt động (migration 007), lọc/sắp xếp phía server cho bảng phản hồi và danh sách khảo sát admin; 98 backend tests pass
+  - [x] Reward system giai đoạn 1: chia 3 mức điểm (migration 008), kết quả sau khi nộp bài kèm hộp hỗ trợ nhóm đỏ, số liệu tổng hợp theo mức; 118 backend tests pass
+  - [x] Mức điểm 2–6 mức, thang chuẩn PSQI/HCL-32, thư viện mẫu khảo sát, mọi người xem khảo sát/nghiên cứu của nhau (chỉ đọc); 150 backend tests pass
 - **In Progress:**
+  - [ ] Reward system giai đoạn 2–4 (danh mục nhiệm vụ + sổ điểm + trần, thú cưng/chuỗi ngày, mini-game) — chờ chốt `docs/reward-system-open-decisions.md`
   - [ ] Áp dụng migration 007 lên database thật
   - [ ] Áp dụng migration 006 lên database thật và kiểm thử Progress Tracking end-to-end với dữ liệu thật
   - [ ] Verify Owner/Researcher/Reviewer permissions with a second account

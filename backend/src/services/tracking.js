@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto'
 import { ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
 import {
-  KEY_PATTERN, SCALE_RANGES, buildSnapshot, computeScore, fingerprintOf, normalizeScoring, slugifyKey
+  KEY_PATTERN, SCALE_RANGES, buildSnapshot, computeScore, fingerprintOf, normalizeScoring, slugifyKey,
+  bandFor, bandForParticipant, normalizeBands
 } from './tracking-scoring.js'
+import { INSTRUMENTS, detectInstruments } from './tracking-instruments.js'
 import { normalizeSchedule, scheduleStatus } from './tracking-schedule.js'
 import {
   KINDS, deviceLabel, expiryFor, hashToken, isUsable, newRecoveryCode, newToken, parseCredentialInput
@@ -21,7 +23,7 @@ export const consentHash = (text, adultAttestation) => sha256(`brainst0rm:consen
 const MISSING_TABLE = ['42P01', 'PGRST205', 'PGRST204']
 export function trackingResult(result) {
   if (MISSING_TABLE.includes(result?.error?.code))
-    throw new HttpError(503, 'Chạy backend/migrations/006_progress_tracking.sql để kích hoạt theo dõi tiến triển')
+    throw new HttpError(503, 'Chạy backend/migrations/006_progress_tracking.sql (và 008_score_bands.sql nếu dùng chia mức điểm) để kích hoạt theo dõi tiến triển')
   return ok(result)
 }
 export const isMissingTable = error => MISSING_TABLE.includes(error?.code)
@@ -59,6 +61,11 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     if (!config?.scoring?.items) return []
     const byId = new Map(questions.map(item => [item.id, item]))
     const warnings = []
+    if (config.scoring.method === 'instrument') {        // thang chuẩn: chỉ kiểm tra các câu hỏi còn tồn tại, không áp khoảng Likert
+      if (config.scoring.items.some(item => !byId.has(item.question_id)))
+        warnings.push('Một câu hỏi của thang chuẩn đã bị xóa khỏi khảo sát; các lần nộp mới sẽ không được chấm điểm.')
+      return warnings
+    }
     const expected = config.scoring.snapshot
     for (const item of config.scoring.items) {
       const question = byId.get(item.question_id)
@@ -75,10 +82,12 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     const { scoring_fingerprint, ...rest } = config
     return {
       surveyId: rest.survey_id, enabled: rest.enabled, assessmentKey: rest.assessment_key, assessmentName: rest.assessment_name,
-      scoring: { method: rest.scoring?.method || 'sum', version: rest.scoring?.version || '1', items: rest.scoring?.items || [] },
+      scoring: { method: rest.scoring?.method || 'sum', instrument: rest.scoring?.instrument || null, version: rest.scoring?.version || '1', items: rest.scoring?.items || [] },
+      instruments: detectInstruments(questions).map(id => ({ id, name: INSTRUMENTS[id].name, range: INSTRUMENTS[id].range, meaning: INSTRUMENTS[id].meaning, publishedBands: INSTRUMENTS[id].publishedBands })),
       fingerprint: scoring_fingerprint ? scoring_fingerprint.slice(0, 12) : null,
       scoreMeaning: rest.score_meaning, schedule: { ...normalizeSchedule(rest.schedule) },
       consentText: rest.consent_text, consentVersion: rest.consent_version, adultAttestation: rest.adult_attestation,
+      bands: rest.bands?.enabled ? rest.bands : { enabled: false },
       updatedAt: rest.updated_at, warnings: configWarnings(config, questions)
     }
   }
@@ -98,8 +107,9 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     const schedule = normalizeSchedule(body.schedule ?? existing?.schedule ?? {})
 
     let scoring = {}, fingerprint = null
-    const hasScoringInput = body.scoring && Array.isArray(body.scoring.items) && body.scoring.items.length
-    if (hasScoringInput || enabled) {
+    const hasScoringInput = body.scoring && (body.scoring.method === 'instrument' || (Array.isArray(body.scoring.items) && body.scoring.items.length))
+    const bandsRequested = body.bands?.enabled === true
+    if (hasScoringInput || enabled || bandsRequested) {
       const clean = normalizeScoring(body.scoring ?? existing?.scoring ?? {}, questions)
       const snapshot = buildSnapshot(clean, questions)
       scoring = { ...clean, snapshot }
@@ -107,6 +117,8 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     } else if (existing?.scoring?.items) {
       scoring = existing.scoring; fingerprint = existing.scoring_fingerprint
     }
+    // Mức điểm: chỉ ghi cột `bands` khi người dùng gửi (để không phụ thuộc migration 008 nếu không dùng tính năng này)
+    const bands = body.bands === undefined ? undefined : normalizeBands(body.bands, scoring.snapshot)
     if (enabled && consentText.length < 20) throw new HttpError(400, 'Cần nội dung đồng ý rõ ràng (tối thiểu 20 ký tự) trước khi bật theo dõi')
 
     // Mỗi lần nội dung đồng ý (hoặc yêu cầu xác nhận người lớn) đổi → tăng phiên bản; người đã đồng ý bản cũ sẽ được hỏi lại.
@@ -114,7 +126,8 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     const row = {
       enabled, assessment_key: assessmentKey, assessment_name: assessmentName, scoring, scoring_fingerprint: fingerprint,
       score_meaning: scoreMeaning, schedule, consent_text: consentText, adult_attestation: adultAttestation,
-      consent_version: existing ? existing.consent_version + (changed ? 1 : 0) : 1, updated_by: userId
+      consent_version: existing ? existing.consent_version + (changed ? 1 : 0) : 1, updated_by: userId,
+      ...(bands === undefined ? {} : { bands: bands || {} })
     }
     const saved = existing
       ? q(await db.from('survey_tracking_configs').update(row).eq('survey_id', survey.id).select('*').single())
@@ -225,12 +238,14 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     const result = snapshot && scoring.items
       ? computeScore(scoring, snapshot, answers)
       : { status: 'unscored', score: null, min: null, max: null, itemCount: null }
+    const band = bandFor(config.bands, result)
     const row = {
       profile_id: profileId, owner_id: survey.user_id, survey_id: survey.id, response_id: response.id,
       assessment_key: config.assessment_key, scoring_fingerprint: config.scoring_fingerprint || null,
       scoring_snapshot: snapshot || {}, score: result.score, score_min: result.min, score_max: result.max,
       item_count: result.itemCount, score_status: result.status === 'scored' ? 'scored' : result.status === 'incomplete' ? 'incomplete' : 'unscored',
-      completed_at: response.submitted_at
+      completed_at: response.submitted_at,
+      ...(band ? { band: band.index, band_thresholds: { direction: config.bands.direction, cutoffs: config.bands.cutoffs, labels: config.bands.labels } } : {})
     }
     const inserted = await db.from('tracking_sessions').insert(row).select('id,profile_id,score,score_status').single()
     if (inserted.error?.code === '23505') {          // idempotent: response này đã có session
@@ -261,6 +276,24 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     } catch (error) {
       console.error('tracking attach failed', error?.message || error)
       return { status: 'error' }
+    }
+  }
+
+  /**
+   * Mức điểm tại thời điểm nộp bài — KHÔNG cần hồ sơ theo dõi và không phụ thuộc người đó có đăng ký hay không,
+   * để hộp hỗ trợ nhóm đỏ luôn hiện. Không bao giờ ném lỗi; không cấu hình/migration chưa chạy → null.
+   */
+  async function bandForSubmit({ survey, answers }) {
+    try {
+      const config = await getConfig(survey.id)
+      if (!config?.bands?.enabled || !config.scoring?.snapshot || !config.scoring.items) return null
+      const map = new Map(answers.map(item => [item.question_id, item.value]))
+      const result = computeScore(config.scoring, config.scoring.snapshot, map)
+      const band = bandFor(config.bands, result)
+      return band ? { ...bandForParticipant(config.bands, band), score: result.score } : null
+    } catch (error) {
+      if (!isMissingTable(error) && error.status !== 503) console.error('band evaluation failed', error?.message || error)
+      return null
     }
   }
 
@@ -418,7 +451,21 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
       number, n: scores.length,
       mean: scores.length >= MIN_GROUP_SIZE ? Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length * 100) / 100 : null
     }))
+    // Số lượng theo mức (chỉ trên các lần đo đã lưu). Ô dưới MIN_GROUP_SIZE bị ẩn để không lộ danh tính nhóm nhỏ.
+    let bands = null
+    if (config.bands?.enabled) {
+      const rows = await db.from('tracking_sessions').select('band').eq('owner_id', survey.user_id).eq('assessment_key', config.assessment_key).not('band', 'is', null).limit(MAX_SESSIONS_LOADED)
+      if (!rows.error) {
+        const total = rows.data.length
+        const levels = config.bands.labels.map((label, index) => {
+          const count = rows.data.filter(row => row.band === index).length
+          return { label, count: total >= MIN_GROUP_SIZE && count >= MIN_GROUP_SIZE ? count : null }
+        })
+        bands = { total: total >= MIN_GROUP_SIZE ? total : null, levels, suppressed: total < MIN_GROUP_SIZE }
+      }
+    }
     return {
+      bands,
       enrolledProfiles: new Set(consents.map(row => row.profile_id)).size,
       activeProfiles: byProfile.size,
       sessionsTotal: sessions.length,
@@ -431,6 +478,6 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
   return {
     getConfig, saveConfig, serializeConfig, scorableQuestions, publicContext, enroll, attachForSubmit, authenticate, recover,
     startProfile, mintCredential, listCredentials, revokeCredential, replaceRecoveryCode, createRecoveryLink, hasConsent,
-    overview, assessmentDetail, deleteProfile, researcherSummary, deviceLabel
+    overview, assessmentDetail, deleteProfile, researcherSummary, deviceLabel, bandForSubmit
   }
 }

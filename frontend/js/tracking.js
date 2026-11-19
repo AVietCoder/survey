@@ -93,13 +93,23 @@ const Tracking = (() => {
         <button class="btn pri" type="submit" id="track-go" disabled>${svg('trend')}Tạo hồ sơ theo dõi</button></form>`
   }
 
+  /** Kết quả mức điểm sau khi nộp bài: hoạt động kể cả khi không tạo hồ sơ theo dõi. Không chẩn đoán. */
+  function bandHtml(band) {
+    if (!band) return ''
+    const label = band.showLabel && band.label ? `<section class="tk-card tk-band tk-band-${esc(band.tone || 'n')}" aria-labelledby="band-title"><span class="tk-band-dot" aria-hidden="true"></span><div><h2 id="band-title">${esc(band.label)}</h2>
+      <p>Đây là gợi ý dựa trên câu trả lời của bạn, giúp bạn chọn việc nhỏ phù hợp. Đây không phải là chẩn đoán hay đánh giá về bạn.</p></div></section>` : ''
+    const support = band.support ? `<section class="tk-card tk-support" aria-labelledby="support-title">${svg('heart')}<div><h2 id="support-title">Cần người lắng nghe?</h2>
+      <p class="tk-support-text">${esc(band.support)}</p><p class="tk-hint">Bạn không cần chờ đến khi mọi chuyện tệ hơn mới tìm sự giúp đỡ.</p></div></section>` : ''
+    return label + support
+  }
+
   function doneHtml(trk, state) {
     if (!trk?.enabled) return ''
     const saved = state.result?.tracking
     if (saved?.status === 'saved') return `<section class="tk-card tk-done" id="track-done">${savedMessage(saved.session)}</section>`
     const unchecked = trk.hasProfile && trk.consentOk
     return `<section class="tk-card tk-done" id="track-done"><h2>${unchecked ? 'Bạn chưa lưu kết quả lần này' : 'Theo dõi tiến triển của bạn'}</h2>
-      <p>Lưu kết quả “${esc(trk.assessmentName)}” để so sánh với các lần làm sau. Kết quả được tính thành một điểm số đơn giản; brainst0rm không đưa ra chẩn đoán hay khuyến nghị.</p>
+      <p>Lưu kết quả “${esc(trk.assessmentName)}” để so sánh với các lần làm sau. Kết quả được tính thành một điểm số đơn giản. brainst0rm không chẩn đoán; mọi gợi ý chỉ để tham khảo.</p>
       <div id="track-body">${consentForm(trk)}</div></section>`
   }
   const savedMessage = session => `<h2>${svg('check')}Đã lưu vào tiến triển của bạn</h2>
@@ -321,6 +331,13 @@ const Tracking = (() => {
 
   const SUMMARY_STATUS = [['due_soon', 'Sắp đến hạn'], ['due', 'Đến hạn'], ['overdue', 'Quá hạn'], ['upcoming', 'Chưa đến hạn'], ['completed', 'Đã đủ số lần đo'], ['unscheduled', 'Không có lịch']]
 
+  function bandSummaryHtml(bands) {
+    if (!bands) return ''
+    const rows = (bands.levels || []).map(level => `<li><span>${esc(level.label)}</span><b class="num">${level.count === null ? '<span class="tk-hint">ẩn (&lt; 5)</span>' : level.count}</b></li>`).join('')
+    return `<section class="card"><h3>Số lần đo theo mức điểm</h3>${bands.suppressed ? '<p class="tk-hint">Chưa đủ lần đo để hiển thị phân bố theo mức (cần ít nhất 5).</p>' : `<ul class="tk-statuses">${rows}</ul>`}
+      <p class="tk-hint">Chỉ tính các lần đo đã lưu vào hồ sơ theo dõi, không gồm người không đăng ký. Ô nhỏ hơn 5 được ẩn để không lộ danh tính nhóm nhỏ.</p></section>`
+  }
+
   function summaryHtml(summary) {
     if (!summary) return emptyState('Chưa có số liệu theo dõi', 'Bật theo dõi và xuất bản khảo sát; số liệu tổng hợp sẽ xuất hiện khi người tham gia tạo hồ sơ.', '', 'trend')
     const stat = (label, value) => `<div class="card kpi"><div class="kpi-top"><span class="kpi-label">${label}</span></div><b class="num">${Number(value).toLocaleString('vi')}</b></div>`
@@ -328,6 +345,7 @@ const Tracking = (() => {
     const truncated = summary.truncated ? `<div class="notice" role="note">${svg('alert')}<div><strong>Số liệu có thể chưa đầy đủ</strong><span>Khảo sát có rất nhiều lần đo; bảng tổng hợp chỉ đọc 5.000 bản ghi gần nhất.</span></div></div>` : ''
     return `${truncated}<div class="grid g4">${stat('Người đã đồng ý theo dõi', summary.enrolledProfiles)}${stat('Người có lần đo', summary.activeProfiles)}${stat('Tổng số lần đo', summary.sessionsTotal)}${stat('Lần đo của khảo sát này', summary.sessionsThisSurvey)}</div>
       <div class="grid g2 tk-config-grid"><section class="card"><h3>Tình trạng lịch</h3><ul class="tk-statuses">${SUMMARY_STATUS.map(([key, label]) => `<li><span>${label}</span><b class="num">${summary.scheduleStatuses[key] || 0}</b></li>`).join('')}</ul></section>
+      ${bandSummaryHtml(summary.bands)}
       <section class="card"><h3>Điểm trung bình theo thứ tự lần đo</h3>${meanRows ? `<div class="analytics-table-wrap"><table class="tbl"><thead><tr><th scope="col">Thứ tự</th><th scope="col">Số người</th><th scope="col">Điểm TB</th></tr></thead><tbody>${meanRows}</tbody></table></div>` : '<p class="tk-hint">Chưa có lần đo nào được chấm điểm.</p>'}
         <p class="tk-hint">Chỉ hiển thị số liệu tổng hợp; không có thông tin từng người tham gia. Điểm trung bình bị ẩn khi dưới ${summary.minGroupSize} người.</p></section></div>`
   }
@@ -336,10 +354,12 @@ const Tracking = (() => {
     const { survey, config, canEdit, role, scorableQuestions } = data
     const items = new Map((config?.scoring.items || []).map(item => [item.question_id, item]))
     const schedule = config?.schedule || { intervalDays: null, upcomingDays: 3, graceDays: 7, maxSessions: null }
+    const bands = config?.bands || { enabled: false }
+    const instruments = config?.instruments || []
     const val = v => (v === null || v === undefined ? '' : esc(v))
     const rangeOf = question => `${question.min}–${question.max}`
     const publicLink = survey.status === 'published' ? '' : '<p class="tk-hint">Khảo sát chưa xuất bản nên người tham gia chưa thể dùng tính năng này.</p>'
-    shell('tracking', `<nav class="research-back" aria-label="Điều hướng"><a href="#/builder/${esc(surveyId)}">← Về trình tạo</a>${role !== 'owner' ? `<span class="role-badge">${role === 'admin' ? 'Quản trị viên · chỉ xem' : role === 'researcher' ? 'Researcher · chỉ xem' : 'Reviewer · chỉ xem'}</span>` : ''}</nav>
+    shell('tracking', `<nav class="research-back" aria-label="Điều hướng"><a href="#/builder/${esc(surveyId)}">← Về trình tạo</a>${role !== 'owner' ? `<span class="role-badge">${role === 'admin' ? 'Quản trị viên · chỉ xem' : role === 'researcher' ? 'Researcher · chỉ xem' : role === 'viewer' ? 'Chỉ xem' : 'Reviewer · chỉ xem'}</span>` : ''}</nav>
       <div class="head"><div><span class="eyebrow">Theo dõi tiến triển</span><h1>${esc(survey.title)}</h1>
         <p><span class="chip ${config?.enabled ? 'c-run' : 'c-end'}">${config?.enabled ? 'Đang bật' : 'Đang tắt'}</span>${config ? ` · phiên bản đồng ý ${config.consentVersion}` : ' · mặc định tắt cho mọi khảo sát'}</p></div></div>
       ${publicLink}
@@ -357,14 +377,29 @@ const Tracking = (() => {
           <p class="tk-hint">Các khảo sát của bạn có cùng mã loại được coi là các phiên bản của một đánh giá và chỉ so sánh khi thang điểm tương thích. Khác mã loại thì không bao giờ gộp điểm.</p>
 
           <h2>Cách tính điểm</h2>
-          <div class="tk-row"><label><span class="tk-lbl">Cách tính</span><select class="sel" id="tk-method"><option value="sum" ${config?.scoring.method !== 'mean' ? 'selected' : ''}>Tổng điểm</option><option value="mean" ${config?.scoring.method === 'mean' ? 'selected' : ''}>Điểm trung bình</option></select></label>
+          <div class="tk-row"><label><span class="tk-lbl">Cách tính</span><select class="sel" id="tk-method"><option value="sum" ${config?.scoring.method === 'sum' || (!config && true) ? 'selected' : ''}>Tổng điểm</option><option value="mean" ${config?.scoring.method === 'mean' ? 'selected' : ''}>Điểm trung bình</option>${instruments.map(item => `<option value="instrument:${esc(item.id)}" ${config?.scoring.method === 'instrument' && config.scoring.instrument === item.id ? 'selected' : ''}>Thang chuẩn: ${esc(item.name)}</option>`).join('')}</select></label>
             <label><span class="tk-lbl">Phiên bản thang điểm</span><input class="in" id="tk-version" maxlength="40" value="${val(config?.scoring.version || '1')}"></label></div>
           <p class="tk-hint">Tăng phiên bản khi bạn thay đổi ý nghĩa thang điểm: các lần đo cũ sẽ không bị so sánh với lần mới.</p>
-          ${scorableQuestions.length ? `<div class="tk-items" role="group" aria-label="Câu hỏi tính điểm">${scorableQuestions.map(q => `<div class="tk-item"><label><input type="checkbox" data-item="${esc(q.id)}" data-range="${rangeOf(q)}" ${items.has(q.id) ? 'checked' : ''}><span>${esc(q.text)} <small>${esc(TN[q.type] || q.type)} · ${rangeOf(q)}</small></span></label>
+          ${scorableQuestions.length ? `<div class="tk-items" id="tk-items" role="group" aria-label="Câu hỏi tính điểm">${scorableQuestions.map(q => `<div class="tk-item"><label><input type="checkbox" data-item="${esc(q.id)}" data-range="${rangeOf(q)}" ${items.has(q.id) ? 'checked' : ''}><span>${esc(q.text)} <small>${esc(TN[q.type] || q.type)} · ${rangeOf(q)}</small></span></label>
             <label class="tk-rev"><input type="checkbox" data-reverse="${esc(q.id)}" ${items.get(q.id)?.reverse ? 'checked' : ''}><span>Đảo chiều</span></label></div>`).join('')}</div>`
+            : instruments.length ? '<div class="tk-items" id="tk-items" hidden></div><p class="tk-hint">Khảo sát này có đủ câu hỏi của một thang chuẩn: hãy chọn “Thang chuẩn” ở mục Cách tính để chấm điểm theo đúng hướng dẫn của thang.</p>'
             : emptyState('Khảo sát chưa có câu hỏi chấm điểm được', 'Thêm câu Likert, đánh giá sao hoặc thanh trượt trong trình tạo trước khi bật theo dõi.', `<a class="btn pri" href="#/builder/${esc(surveyId)}">${svg('edit')}Mở trình tạo</a>`, 'edit')}
           <label>Ý nghĩa của điểm <small>(mô tả trung tính, ví dụ "điểm cao hơn thể hiện mức hài lòng cao hơn")</small><input class="in" id="tk-meaning" maxlength="300" value="${val(config?.scoreMeaning)}"></label>
-          <p class="tk-hint">brainst0rm chỉ mô tả chênh lệch điểm. Không dùng ngưỡng, nhãn "tốt/xấu" hay kết luận lâm sàng.</p>
+          <p class="tk-hint">So sánh giữa các lần đo chỉ mô tả chênh lệch điểm, không có nhãn "tốt/xấu" hay kết luận lâm sàng. Việc chia mức xanh/vàng/đỏ (nếu bật bên dưới) chỉ để gợi ý nhiệm vụ.</p>
+
+          <h2>Chia mức điểm <small class="tk-opt-tag">tùy chọn</small></h2>
+          <label class="tk-switch"><input type="checkbox" id="tk-bands-on" ${bands.enabled ? 'checked' : ''}><span><b>Chia người làm khảo sát thành 2–6 mức theo điểm</b><small>Dùng để gợi ý nhiệm vụ phù hợp ngay sau khi nộp bài, kể cả khi người đó không tạo hồ sơ theo dõi.</small></span></label>
+          <div id="tk-bands-body" ${bands.enabled ? '' : 'hidden'}>
+            <div class="notice" role="note">${svg('info')}<div><strong>Ngưỡng phải có căn cứ khoa học</strong><span>brainst0rm không tự suy ra ngưỡng và không chẩn đoán. Hãy dùng điểm cắt của công cụ đã được chuẩn hóa cho đúng nhóm đối tượng. Mức chỉ để gợi ý nhiệm vụ.</span></div></div>
+            <div id="tk-published" class="tk-actions" hidden></div>
+            <div class="tk-row tk-row-3"><label><span class="tk-lbl">Số mức</span><select class="sel" id="tk-bands-count">${[2, 3, 4, 5, 6].map(n => `<option value="${n}" ${(bands.labels?.length || 3) === n ? 'selected' : ''}>${n} mức</option>`).join('')}</select></label>
+              <label><span class="tk-lbl">Điểm cao nghĩa là</span><select class="sel" id="tk-bands-dir"><option value="higher_worse" ${bands.direction !== 'higher_better' ? 'selected' : ''}>Cần hỗ trợ nhiều hơn</option><option value="higher_better" ${bands.direction === 'higher_better' ? 'selected' : ''}>Tốt hơn</option></select></label>
+              <label><span class="tk-lbl">Hiện tên mức cho người làm khảo sát</span><select class="sel" id="tk-bands-show"><option value="no" ${bands.showToStudent ? '' : 'selected'}>Ẩn (khuyến nghị)</option><option value="yes" ${bands.showToStudent ? 'selected' : ''}>Hiện</option></select></label></div>
+            <div id="tk-levels" class="tk-levels" role="group" aria-label="Các mức điểm"></div>
+            <p class="tk-hint" id="tk-bands-preview" role="status"></p>
+            <label>Kênh hỗ trợ cho mức cần hỗ trợ nhiều nhất <small>(bắt buộc, ví dụ phòng tư vấn của trường, đường dây nóng)</small><textarea id="tk-support" rows="3" maxlength="600" placeholder="Nhập đúng thông tin liên hệ thật của kênh hỗ trợ">${esc(bands.supportText || '')}</textarea></label>
+            <p class="tk-hint">Hộp “Cần người lắng nghe?” luôn hiện cho mức cần hỗ trợ nhiều nhất, kể cả khi bạn ẩn tên mức. brainst0rm không tự điền thông tin liên hệ.</p>
+          </div>
 
           <h2>Lịch theo dõi</h2>
           <div class="tk-row tk-row-4"><label><span class="tk-lbl">Khoảng cách giữa các lần (ngày)</span><input class="in" id="tk-interval" type="number" min="1" max="365" inputmode="numeric" value="${val(schedule.intervalDays)}" placeholder="Không đặt lịch"></label>
@@ -397,14 +432,87 @@ const Tracking = (() => {
       if (area.value.trim() && !await confirmAction('Nội dung hiện tại sẽ bị thay bằng mẫu tham khảo.', 'Thay nội dung đồng ý?', 'Thay bằng mẫu')) return
       area.value = CONSENT_TEMPLATE; area.focus()
     }
+    const instrumentOf = () => { const value = $('#tk-method').value; return value.startsWith('instrument:') ? instruments.find(item => item.id === value.slice(11)) : null }
+    const syncMethod = () => { const inst = instrumentOf(); const box = $('#tk-items'); if (box) box.hidden = Boolean(inst) }
+    const range = () => {
+      const inst = instrumentOf()
+      if (inst) return inst.range
+      const chosen = boxes().filter(box => box.checked)
+      if (!chosen.length) return null
+      const [lo, hi] = chosen[0].dataset.range.split('–').map(Number)
+      return $('#tk-method').value === 'sum' ? [lo * chosen.length, hi * chosen.length] : [lo, hi]
+    }
+    const level = { cutoffs: (bands.cutoffs || []).map(String), labels: [...(bands.labels || [])] }
+    const tones = { 2: ['green', 'red'], 3: ['green', 'yellow', 'red'], 4: ['green', 'yellow', 'orange', 'red'], 5: ['green', 'lime', 'yellow', 'orange', 'red'], 6: ['blue', 'green', 'lime', 'yellow', 'orange', 'red'] }
+    const readLevels = () => {
+      level.labels = $$('[data-level-label]', form).map(input => input.value)
+      level.cutoffs = $$('[data-level-cut]', form).map(input => input.value)
+    }
+    const previewBands = () => {
+      const slot = $('#tk-bands-preview'), r = range(), count = Number($('#tk-bands-count').value)
+      if (!r) { slot.textContent = 'Chọn câu hỏi tính điểm ở trên để xem khoảng điểm.'; return }
+      readLevels()
+      const cuts = level.cutoffs.slice(0, count - 1)
+      const parts = Array.from({ length: count }, (_, index) => {
+        const from = index === 0 ? r[0] : cuts[index - 1], to = index === count - 1 ? r[1] : cuts[index]
+        const name = (level.labels[index] || '').trim() || `Mức ${index + 1}`
+        return from === '' || to === '' || from === undefined || to === undefined ? null : `${name}: ${from}${index === count - 1 ? '–' + to : ' đến dưới ' + to}`
+      })
+      slot.textContent = `Khoảng điểm đạt được ${r[0]}–${r[1]}. ${parts.every(Boolean) ? parts.join(' · ') : 'Nhập đủ các điểm cắt để xem từng mức.'}`
+    }
+    const renderLevels = (fresh = false) => {
+      const count = Number($('#tk-bands-count').value), r = range()
+      // Đọc lại từ ô nhập chỉ khi đang có ô (đổi số mức/hướng điểm). Lần vẽ đầu hoặc khi nạp ngưỡng đã công bố
+      // phải dùng giá trị trong `level`, nếu không sẽ bị ghi đè bằng ô trống.
+      if (!fresh && $('#tk-levels').children.length) readLevels()
+      while (level.labels.length < count) level.labels.push('')
+      while (level.cutoffs.length < count - 1) level.cutoffs.push('')
+      const worseUp = $('#tk-bands-dir').value === 'higher_worse', palette = tones[count]
+      $('#tk-levels').innerHTML = Array.from({ length: count }, (_, index) => {
+        const severity = worseUp ? index : count - 1 - index
+        return `<div class="tk-level"><span class="tk-level-dot tk-tone-${palette[severity]}" aria-hidden="true"></span>
+          <label><span class="tk-lbl">Tên mức ${index + 1}</span><input class="in" data-level-label maxlength="40" value="${esc(level.labels[index] || '')}" placeholder="Mức ${index + 1}"></label>
+          ${index === 0 ? `<div class="tk-level-from"><span class="tk-lbl">Từ điểm</span><b>${r ? r[0] : '—'}</b></div>` : `<label><span class="tk-lbl">Từ điểm</span><input class="in" type="number" step="any" inputmode="decimal" data-level-cut value="${esc(level.cutoffs[index - 1] || '')}"></label>`}</div>`
+      }).join('')
+      $$('#tk-levels input').forEach(input => { input.oninput = previewBands })
+      previewBands()
+    }
+    const showPublished = () => {
+      const slot = $('#tk-published'), inst = instrumentOf()
+      if (!inst) { slot.hidden = true; slot.innerHTML = ''; return }
+      slot.hidden = false
+      slot.innerHTML = `<button class="btn" type="button" id="tk-use-published">Điền ngưỡng đã công bố của ${esc(inst.name)}</button><p class="tk-hint">${esc(inst.publishedBands.note)}</p>`
+      $('#tk-use-published').onclick = () => {
+        const published = inst.publishedBands
+        $('#tk-bands-count').value = String(published.labels.length); window.BrainstormUI?.refreshDropdown?.($('#tk-bands-count'))
+        $('#tk-bands-dir').value = published.direction; window.BrainstormUI?.refreshDropdown?.($('#tk-bands-dir'))
+        level.labels = [...published.labels]; level.cutoffs = published.cutoffs.map(String)
+        renderLevels(true)
+      }
+    }
+    const refreshBands = () => { syncMethod(); showPublished(); renderLevels() }
+    $('#tk-bands-on').onchange = () => { $('#tk-bands-body', form).hidden = !$('#tk-bands-on').checked; if ($('#tk-bands-on').checked) refreshBands() }
+    ;['#tk-bands-count', '#tk-bands-dir'].forEach(id => { $(id).onchange = () => renderLevels() })
+    $('#tk-method').onchange = refreshBands
+    boxes().forEach(box => { const prior = box.onchange; box.onchange = () => { prior?.(); renderLevels() } })
+    syncMethod(); showPublished(); renderLevels()
     form.onsubmit = async event => {
       event.preventDefault()
       const intOrNull = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v) }
       const body = {
         enabled: $('#tk-enabled').checked, assessmentName: $('#tk-name').value, assessmentKey: $('#tk-key').value.trim() || undefined,
         scoreMeaning: $('#tk-meaning').value, consentText: $('#tk-consent').value, adultAttestation: $('#tk-adult').checked,
-        scoring: { method: $('#tk-method').value, version: $('#tk-version').value, items: boxes().filter(box => box.checked).map(box => ({ question_id: box.dataset.item, reverse: $(`[data-reverse="${box.dataset.item}"]`, form).checked })) },
+        scoring: { ...(instrumentOf() ? { method: 'instrument', instrument: instrumentOf().id } : { method: $('#tk-method').value }), version: $('#tk-version').value, items: instrumentOf() ? [] : boxes().filter(box => box.checked).map(box => ({ question_id: box.dataset.item, reverse: $(`[data-reverse="${box.dataset.item}"]`, form).checked })) },
         schedule: { intervalDays: intOrNull('#tk-interval'), upcomingDays: intOrNull('#tk-upcoming'), graceDays: intOrNull('#tk-grace'), maxSessions: intOrNull('#tk-max') }
+      }
+      // Chỉ gửi `bands` khi đang bật hoặc trước đó đã có, để khảo sát không dùng tính năng này không phụ thuộc migration 008
+      if ($('#tk-bands-on').checked || config?.bands?.enabled) {
+        readLevels()
+        const count = Number($('#tk-bands-count').value)
+        body.bands = $('#tk-bands-on').checked ? {
+          enabled: true, direction: $('#tk-bands-dir').value, showToStudent: $('#tk-bands-show').value === 'yes',
+          cutoffs: level.cutoffs.slice(0, count - 1), labels: level.labels.slice(0, count), supportText: $('#tk-support').value
+        } : { enabled: false }
       }
       $('#tk-error').textContent = ''
       const restore = setButtonLoading($('#tk-save'), 'Đang lưu…')
@@ -416,5 +524,5 @@ const Tracking = (() => {
     }
   }
 
-  return { context, introHtml, wantsTrack, doneHtml, wireDone, participantRoute, configView }
+  return { context, introHtml, wantsTrack, bandHtml, doneHtml, wireDone, participantRoute, configView }
 })()

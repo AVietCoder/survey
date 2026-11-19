@@ -15,7 +15,7 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
     constructor(table) {
       Object.assign(this, { table, op: 'select', filters: [], sort: [], max: null, offset: 0, payload: null, returning: false, mode: 'many' })
     }
-    select() { if (this.op !== 'select') this.returning = true; return this }
+    select(columns) { this.columns = typeof columns === 'string' ? columns : ''; if (this.op !== 'select') this.returning = true; return this }
     insert(payload) { this.op = 'insert'; this.payload = payload; return this }
     update(payload) { this.op = 'update'; this.payload = payload; return this }
     delete() { this.op = 'delete'; return this }
@@ -74,7 +74,10 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
       let rows = this.matches()
       for (const [column, ascending] of [...this.sort].reverse())
         rows = [...rows].sort((a, b) => (a[column] > b[column] ? 1 : a[column] < b[column] ? -1 : 0) * (ascending ? 1 : -1))
-      return { ...this.shape(rows.slice(this.offset, this.offset + (this.max ?? rows.length))), count: rows.length }
+      let page = rows.slice(this.offset, this.offset + (this.max ?? rows.length))
+      // nhúng quan hệ tối thiểu mà ứng dụng dùng: questions → question_options(*)
+      if (this.table === 'questions' && (this.columns || '').includes('question_options(*)')) page = page.map(row => ({ ...row, question_options: rowsOf('question_options').filter(option => option.question_id === row.id) }))
+      return { ...this.shape(page), count: rows.length }
     }
     then(resolve, reject) { return Promise.resolve(this.run()).then(resolve, reject) }
   }

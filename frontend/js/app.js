@@ -34,6 +34,7 @@ async function api(method,path,body){
  if(!r.ok){if(r.status==401&&me){me=null;location.hash='#/login'}throw Object.assign(new Error(j.error||'Có lỗi xảy ra'),{status:r.status})}
  return j}
 const ic={home:'<path d="M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',research:'<circle cx="8" cy="8" r="4"/><path d="M2 21v-2a6 6 0 0 1 12 0v2M16 3.5a4 4 0 0 1 0 9M18 15a5 5 0 0 1 4 5v1"/>',shield:'<path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3z"/><path d="m9 12 2 2 4-4"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
  file:'<path d="M5 4.75h9l5 5v9.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M14 4.75v5h5M8 14h8M8 17h5"/>',plus:'<path d="M12 5v14M5 12h14"/>',check:'<path d="M20 6 9 17l-5-5"/>',checkCircle:'<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
  alert:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5h.01"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  inbox:'<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',download:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
@@ -170,23 +171,47 @@ function authView(){
  draw()}
 
 /* ---------- Dashboard ---------- */
+/** Hộp thoại "Tạo từ mẫu": thang đo chuẩn dựng sẵn (PSQI, HCL-32), tạo thành khảo sát nháp của chính người dùng. */
+async function openTemplates(){
+ let templates;
+ try{templates=(await api('GET','/templates')).templates}catch(error){toast(error.message,'error');return}
+ const dialog=document.createElement('dialog');dialog.className='confirm-dialog template-dialog';
+ dialog.innerHTML=`<div class="dialog-content"><span class="chip c-run">Thư viện mẫu</span><h2>Tạo khảo sát từ thang đo chuẩn</h2>
+  <p class="tpl-lead">Mẫu được tạo thành <b>bản nháp của bạn</b>, kèm cách chấm điểm. Bạn có thể xuất bản sau khi xem lại. Điểm chỉ để sàng lọc, không phải chẩn đoán.</p>
+  <div class="tpl-list">${templates.map(t=>`<article class="tpl-card"><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><p class="tpl-note">${esc(t.notes)}</p>
+   <p class="tpl-note"><b>Ngưỡng đã công bố:</b> ${esc(t.publishedBands.note)}</p><div class="tpl-foot"><small>${t.questionCount} câu hỏi</small><button class="btn pri" type="button" data-tpl="${esc(t.key)}">Dùng mẫu này</button></div></article>`).join('')}</div>
+  <div class="dialog-actions"><button class="btn" type="button" data-tpl-close>Đóng</button></div></div>`;
+ const close=()=>{if(dialog.open)dialog.close();dialog.remove()};
+ $('[data-tpl-close]',dialog).onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close()});dialog.addEventListener('click',e=>{if(e.target===dialog)close()});
+ $$('[data-tpl]',dialog).forEach(button=>button.onclick=async()=>{
+  const restore=setButtonLoading(button,'Đang tạo…');
+  try{const result=await api('POST','/templates/'+encodeURIComponent(button.dataset.tpl)+'/survey',{});close();
+   toast(result.trackingConfigured?'Đã tạo khảo sát từ mẫu':'Đã tạo khảo sát từ mẫu (cấu hình chấm điểm cần chạy migration 006)');
+   location.hash='#/builder/'+result.survey.id}
+  catch(error){restore();toast(error.message,'error')}});
+ document.body.append(dialog);dialog.showModal();
+}
 async function dashboardView(){
  loading('dashboard');
- try{const [o,l]=await Promise.all([api('GET','/analytics/overview'),api('GET','/surveys')]);let list=l.surveys,f='all',query='';const sf={from:'',to:'',min:'',sort:'updated'};const SORTERS={updated:(a,b)=>b.updated_at.localeCompare(a.updated_at),title:(a,b)=>a.title.localeCompare(b.title,'vi'),responses:(a,b)=>b.response_count-a.response_count,completion:(a,b)=>b.completion_rate-a.completion_rate};const hasSurveyFilter=()=>Boolean(query||sf.from||sf.to||sf.min!=='');
+ try{const [o,l]=await Promise.all([api('GET','/analytics/overview'),api('GET','/surveys')]);const mine=l.surveys;let list=mine,allList=null,scope='mine',f='all',query='';
+  /* Khảo sát hiển thị chung như nghiên cứu: mặc định xem tất cả, có nút chuyển sang "Của tôi" */
+  try{allList=(await api('GET','/surveys?scope=all')).surveys}catch{allList=null}
+  if(allList?.length){list=allList;scope='all'}
+  const sf={from:'',to:'',min:'',sort:'updated'};const SORTERS={updated:(a,b)=>b.updated_at.localeCompare(a.updated_at),title:(a,b)=>a.title.localeCompare(b.title,'vi'),responses:(a,b)=>b.response_count-a.response_count,completion:(a,b)=>b.completion_rate-a.completion_rate};const hasSurveyFilter=()=>Boolean(query||sf.from||sf.to||sf.min!=='');
   const hour=new Date().getHours(),greeting=hour<11?'Chào buổi sáng':hour<14?'Chào buổi trưa':hour<18?'Chào buổi chiều':'Chào buổi tối';
   const count=status=>status=='all'?list.length:list.filter(s=>s.status==status).length,running=count('published');
   const kp=[['Tổng phản hồi',o.completed.toLocaleString('vi'),`Trên ${o.totalSurveys} khảo sát`,'inbox',''],['Tỷ lệ hoàn thành',o.completionRate+'%',`${o.completed}/${o.started} lượt bắt đầu`,'checkCircle','teal'],['Thời gian trung bình',fmt(o.avgDuration),'phút:giây mỗi phản hồi','clock','amber'],['Phản hồi bình thường',o.normalRate==null?'—':o.normalRate+'%',`${o.review.needs_review} chờ researcher đánh giá`,'shield','rose']];
-  const onboarding=`<section class="card onboard"><div class="onboard-intro"><span class="empty-state-icon" aria-hidden="true">${svg('edit')}</span><h2>Bắt đầu khảo sát đầu tiên</h2><p>Thiết kế bảng hỏi, chia sẻ đường dẫn công khai và theo dõi chất lượng phản hồi ngay khi người tham gia trả lời.</p><button class="btn pri" type="button" data-create-survey>${svg('plus')}Tạo khảo sát mới</button></div>
+  const onboarding=`<section class="card onboard"><div class="onboard-intro"><span class="empty-state-icon" aria-hidden="true">${svg('edit')}</span><h2>Bắt đầu khảo sát đầu tiên</h2><p>Thiết kế bảng hỏi, chia sẻ đường dẫn công khai và theo dõi chất lượng phản hồi ngay khi người tham gia trả lời.</p><button class="btn pri" type="button" data-create-survey>${svg('plus')}Tạo khảo sát mới</button><button class="btn" type="button" data-template-open>${svg('file')}Tạo từ mẫu</button></div>
    <ol class="onboard-steps"><li><b>1</b><div><strong>Thiết kế câu hỏi</strong><small>Chọn trong 11 dạng câu hỏi, kéo thả để sắp xếp và xem trước như người tham gia.</small></div></li><li><b>2</b><div><strong>Xuất bản và chia sẻ</strong><small>Mỗi khảo sát có một đường dẫn công khai; câu trả lời được ghi nhận ẩn danh.</small></div></li><li><b>3</b><div><strong>Sàng lọc và phân tích</strong><small>Đánh giá chất lượng phản hồi, xem thống kê mô tả, tương quan và xuất CSV/Excel.</small></div></li></ol></section>`;
-  const listPanel=`<section class="panel"><div class="panel-head"><div><h2>Khảo sát của bạn</h2><p>Chọn một khảo sát để chỉnh sửa, hoặc mở số phản hồi để xem phân tích.</p></div>
-   <div class="panel-tools"><label class="search-field">${svg('search')}<span class="sr-only">Tìm khảo sát</span><input type="search" id="survey-search" placeholder="Tìm theo tên khảo sát" autocomplete="off"></label>
+  const listPanel=`<section class="panel"><div class="panel-head"><div><h2>Khảo sát</h2><p>Mọi người xem được khảo sát của nhau (chỉ đọc). Chọn khảo sát của bạn để chỉnh sửa, hoặc mở số phản hồi để xem phân tích.</p></div>
+   <div class="panel-tools"><div class="seg" role="group" aria-label="Phạm vi khảo sát" id="scope-seg"><button type="button" data-scope="mine" class="${scope=='mine'?'on':''}" aria-pressed="${scope=='mine'}">Của tôi</button><button type="button" data-scope="all" class="${scope=='all'?'on':''}" aria-pressed="${scope=='all'}">Tất cả</button></div><label class="search-field">${svg('search')}<span class="sr-only">Tìm khảo sát</span><input type="search" id="survey-search" placeholder="Tìm theo tên khảo sát" autocomplete="off"></label>
    <div class="tabs" role="group" aria-label="Lọc khảo sát theo trạng thái">${[['all','Tất cả'],['published','Đang chạy'],['draft','Bản nháp'],['archived','Lưu trữ']].map((t,i)=>`<button type="button" data-f="${t[0]}" class="${i?'':'on'}" aria-pressed="${i?'false':'true'}">${t[1]}<span class="count">${count(t[0])}</span></button>`).join('')}</div></div></div>
    <form class="survey-filters" id="survey-filters" novalidate><label class="resp-f">Cập nhật từ<input class="in" type="date" name="from"></label><label class="resp-f">Đến ngày<input class="in" type="date" name="to"></label><label class="resp-f">Phản hồi tối thiểu<input class="in" type="number" name="min" min="0" inputmode="numeric" placeholder="0"></label><label class="resp-f">Sắp xếp<select class="sel" name="sort"><option value="updated">Cập nhật mới nhất</option><option value="title">Tên A → Z</option><option value="responses">Nhiều phản hồi nhất</option><option value="completion">Tỷ lệ hoàn thành cao nhất</option></select></label><button class="btn" type="button" data-survey-filter-reset>Đặt lại</button></form><div class="srow-head" aria-hidden="true"><span>Khảo sát</span><span>Trạng thái</span><span>Tỷ lệ hoàn thành</span><span>Phản hồi</span></div><div id="list"></div></section>`;
-  shell('dashboard',`<div class="head"><div><span class="eyebrow">Tổng quan</span><h1>${greeting}, ${esc(me.username)}</h1><p>${list.length?`${running} khảo sát đang thu thập phản hồi · ${list.length} khảo sát tất cả.`:'Chưa có khảo sát nào. Hãy bắt đầu với khảo sát đầu tiên.'}</p></div><button class="btn pri" type="button" data-create-survey>${svg('plus')}Tạo khảo sát mới</button></div>
+  shell('dashboard',`<div class="head"><div><span class="eyebrow">Tổng quan</span><h1>${greeting}, ${esc(me.username)}</h1><p>${mine.length?`${mine.filter(s=>s.status=='published').length} khảo sát của bạn đang thu thập phản hồi · ${mine.length} khảo sát của bạn tất cả.`:'Chưa có khảo sát nào. Hãy bắt đầu với khảo sát đầu tiên.'}</p></div><button class="btn pri" type="button" data-create-survey>${svg('plus')}Tạo khảo sát mới</button><button class="btn" type="button" data-template-open>${svg('file')}Tạo từ mẫu</button></div>
   <div class="grid g4">${kp.map(k=>kpi(...k)).join('')}</div>${list.length?listPanel:onboarding}`);
   const draw=()=>{const needle=query.toLocaleLowerCase('vi'),x=list.filter(s=>(f=='all'||s.status==f)&&s.title.toLocaleLowerCase('vi').includes(needle)&&(!sf.from||s.updated_at.slice(0,10)>=sf.from)&&(!sf.to||s.updated_at.slice(0,10)<=sf.to)&&(sf.min===''||s.response_count>=Number(sf.min))).sort(SORTERS[sf.sort]);
-   $('#list').innerHTML=x.length?x.map(s=>`<div class="srow" data-id="${s.id}" role="group" tabindex="0" aria-label="Khảo sát ${esc(s.title)}, mở trình tạo">
-    <div class="srow-main"><span class="srow-ic ${esc(s.status)}" aria-hidden="true">${svg('file')}</span><div><h3>${esc(s.title)}</h3><small>Cập nhật ${ago(s.updated_at)}</small></div></div>
+   $('#list').innerHTML=x.length?x.map(s=>`<div class="srow" data-id="${s.id}" data-ro="${s.mine===false?'1':'0'}" role="group" tabindex="0" aria-label="Khảo sát ${esc(s.title)}, ${s.mine===false?'xem trước':'mở trình tạo'}">
+    <div class="srow-main"><span class="srow-ic ${esc(s.status)}" aria-hidden="true">${svg('file')}</span><div><h3>${esc(s.title)}</h3><small>Cập nhật ${ago(s.updated_at)}${s.owner&&s.mine===false?` · bởi ${esc(s.owner)}`:''}</small></div></div>
     <div class="srow-status"><span class="chip ${SL[s.status][1]}">${SL[s.status][0]}</span></div>
     <div class="srow-progress"><div class="bar ${s.status=='published'?'t':''}"><i style="width:${s.completion_rate}%"></i></div><small>${s.completion_rate}%</small></div>
     <div class="srow-count"><a href="#/analytics/${s.id}" onclick="event.stopPropagation()" title="Xem phân tích"><b>${Number(s.response_count).toLocaleString('vi')}</b><small>phản hồi</small></a></div></div>`).join(''):emptyState(
@@ -194,7 +219,7 @@ async function dashboardView(){
     hasSurveyFilter()?'Không có khảo sát nào khớp bộ lọc hiện tại. Thử nới khoảng ngày, số phản hồi hoặc từ khóa.':'Thử chọn trạng thái khác để xem các khảo sát của bạn.',
     '<button class="btn" type="button" data-empty-reset>Xóa bộ lọc</button>',hasSurveyFilter()?'search':'filter');
    const reset=$('[data-empty-reset]');if(reset)reset.onclick=()=>resetSurveyFilters();
-   $$('.srow').forEach(r=>{r.onclick=()=>location.hash='#/builder/'+r.dataset.id;r.onkeydown=e=>{if(e.key=='Enter'&&e.target===r){e.preventDefault();location.hash='#/builder/'+r.dataset.id}}})};
+   $$('.srow').forEach(r=>{const target=()=>(r.dataset.ro=='1'?'#/preview/':'#/builder/')+r.dataset.id;r.onclick=()=>location.hash=target();r.onkeydown=e=>{if(e.key=='Enter'&&e.target===r){e.preventDefault();location.hash=target()}}})};
   const resetSurveyFilters=()=>{query='';Object.assign(sf,{from:'',to:'',min:'',sort:'updated'});const form=$('#survey-filters');if(form){form.reset();window.BrainstormUI.refreshDropdown?.(form.sort)}$('#survey-search').value='';$('[data-f="all"]').click()};
   if(list.length){
    const form=$('#survey-filters');
@@ -202,7 +227,15 @@ async function dashboardView(){
    form.onsubmit=e=>e.preventDefault();$('[data-survey-filter-reset]').onclick=resetSurveyFilters;
    draw();$$('.tabs button').forEach(b=>{b.onclick=()=>{f=b.dataset.f;$$('.tabs button').forEach(x=>{x.classList.toggle('on',x==b);x.setAttribute('aria-pressed',String(x==b))});draw()}});
    $('#survey-search').oninput=e=>{query=e.target.value.trim();draw()};
+   $$('#scope-seg button').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.scope==scope)return;
+    if(b.dataset.scope=='all'&&!allList){try{allList=(await api('GET','/surveys?scope=all')).surveys}catch(error){toast(error.message,'error');return}}
+    scope=b.dataset.scope;list=scope=='all'?allList:mine;
+    $$('#scope-seg button').forEach(x=>{x.classList.toggle('on',x==b);x.setAttribute('aria-pressed',String(x==b))});
+    $$('.tabs button').forEach(t=>{const c=t.querySelector('.count');if(c)c.textContent=count(t.dataset.f)});
+    draw()});
   }
+  $$('[data-template-open]').forEach(button=>button.onclick=()=>openTemplates());
   $$('[data-create-survey]').forEach(button=>button.onclick=async()=>{if(button.disabled)return;const restore=setButtonLoading(button,'Đang tạo…');try{const s=(await api('POST','/surveys',{title:'Khảo sát chưa đặt tên'})).survey;location.hash='#/builder/'+s.id}catch(e){restore();toast(e.message,'error')}});
  }catch(e){fail('dashboard',e,()=>dashboardView())}}
 
@@ -234,7 +267,7 @@ async function researchView(projectId){
       <label>Mô tả<textarea name="description" maxlength="2000" rows="3" placeholder="Mục tiêu và phạm vi nghiên cứu"></textarea></label>
       <button class="btn pri" type="submit">${svg('plus')}Tạo nghiên cứu</button></form></div>
     <div class="research-project-list" id="research-project-list">${projects.length?projects.map(project=>`<a class="research-project-card card" href="#/research/${project.id}">
-      <div class="research-card-top"><span class="chip ${researchStatus[project.status]?.[1]||'c-end'}">${researchStatus[project.status]?.[0]||esc(project.status)}</span><small>${project.role==='owner'?'Chủ sở hữu':'Cộng tác viên'}</small></div>
+      <div class="research-card-top"><span class="chip ${researchStatus[project.status]?.[1]||'c-end'}">${researchStatus[project.status]?.[0]||esc(project.status)}</span><small>${project.role==='owner'?'Chủ sở hữu':project.role==='viewer'?'Chỉ xem':'Cộng tác viên'}${project.owner&&project.role!=='owner'?' · '+esc(project.owner):''}</small></div>
       <h2>${esc(project.title)}</h2><p>${esc(project.description||'Chưa có mô tả')}</p>
       <div class="research-card-meta"><span>${project.surveyCount} khảo sát liên kết</span><span>Cập nhật ${researchDate(project.updated_at)}</span></div></a>`).join(''):emptyState('Chưa có nghiên cứu','Tạo nghiên cứu đầu tiên bằng biểu mẫu bên trên để tổ chức khảo sát, cộng tác viên, participant và ghi chú trong cùng một nơi.','','research')}</div>
     ${result.total>projects.length?`<button class="btn research-load-more" id="research-load-more" data-page="1">Tải thêm nghiên cứu</button>`:''}`);
@@ -247,7 +280,7 @@ async function researchView(projectId){
    const more=$('#research-load-more');
    if(more)more.onclick=async()=>{
     const page=Number(more.dataset.page)+1,restore=setButtonLoading(more,'Đang tải…');
-    try{const next=await api('GET',`/research/projects?page=${page}`);$('#research-project-list').insertAdjacentHTML('beforeend',next.projects.map(project=>`<a class="research-project-card card" href="#/research/${project.id}"><div class="research-card-top"><span class="chip ${researchStatus[project.status]?.[1]||'c-end'}">${researchStatus[project.status]?.[0]||esc(project.status)}</span><small>${project.role==='owner'?'Chủ sở hữu':'Cộng tác viên'}</small></div><h2>${esc(project.title)}</h2><p>${esc(project.description||'Chưa có mô tả')}</p><div class="research-card-meta"><span>${project.surveyCount} khảo sát liên kết</span><span>Cập nhật ${researchDate(project.updated_at)}</span></div></a>`).join(''));if((page*next.pageSize)>=next.total)more.remove();else{more.dataset.page=String(page);restore()}}
+    try{const next=await api('GET',`/research/projects?page=${page}`);$('#research-project-list').insertAdjacentHTML('beforeend',next.projects.map(project=>`<a class="research-project-card card" href="#/research/${project.id}"><div class="research-card-top"><span class="chip ${researchStatus[project.status]?.[1]||'c-end'}">${researchStatus[project.status]?.[0]||esc(project.status)}</span><small>${project.role==='owner'?'Chủ sở hữu':project.role==='viewer'?'Chỉ xem':'Cộng tác viên'}${project.owner&&project.role!=='owner'?' · '+esc(project.owner):''}</small></div><h2>${esc(project.title)}</h2><p>${esc(project.description||'Chưa có mô tả')}</p><div class="research-card-meta"><span>${project.surveyCount} khảo sát liên kết</span><span>Cập nhật ${researchDate(project.updated_at)}</span></div></a>`).join(''));if((page*next.pageSize)>=next.total)more.remove();else{more.dataset.page=String(page);restore()}}
     catch(error){restore();toast(error.message,'error')}
    };
    return
@@ -262,7 +295,7 @@ async function researchView(projectId){
   const participantTotal=participantResult.total||0;
   const available=(surveyResult.surveys||[]).filter(survey=>!project.surveys.some(link=>link.id===survey.id));
   const renderParticipantRow=participant=>`<tr><td><code>${esc(participant.participant_code)}</code></td><td>${canEdit?`<label class="sr-only" for="participant-${participant.id}">Trạng thái participant ${esc(participant.participant_code)}</label><select class="sel research-participant-status" id="participant-${participant.id}" data-participant-id="${participant.id}" data-current-status="${participant.status}">${Object.entries(participantStatus).map(([status,label])=>`<option value="${status}" ${status===participant.status?'selected':''}>${label}</option>`).join('')}</select>`:`<span class="chip ${participant.status==='completed'?'c-ok':participant.status==='withdrawn'?'c-end':'c-warn'}">${participantStatus[participant.status]||esc(participant.status)}</span>`}</td><td>${researchDate(participant.created_at)}</td></tr>`;
-  shell('research',`<div class="research-back"><a href="#/research">← Tất cả nghiên cứu</a><span class="role-badge">${project.role==='owner'?'Chủ sở hữu':project.role==='researcher'?'Researcher':'Reviewer'}</span></div>
+  shell('research',`<div class="research-back"><a href="#/research">← Tất cả nghiên cứu</a><span class="role-badge">${project.role==='owner'?'Chủ sở hữu':project.role==='researcher'?'Researcher':project.role==='viewer'?'Chỉ xem':'Reviewer'}</span></div>
    <div class="head research-detail-head"><div><span class="chip ${researchStatus[project.status]?.[1]||'c-end'}">${researchStatus[project.status]?.[0]||esc(project.status)}</span><h1>${esc(project.title)}</h1><p>${esc(project.description||'Chưa có mô tả')}</p></div>
     ${canEdit?`<label class="research-status-select">Trạng thái<select class="sel" id="research-status">${Object.entries(researchStatus).map(([key,[label]])=>`<option value="${key}" ${project.status===key?'selected':''}>${label}</option>`).join('')}</select></label>`:''}</div>
    <div class="research-overview grid g4">${[['Khảo sát liên kết',project.surveys.length,'Dữ liệu gốc không bị thay đổi','link',''],['Phản hồi hoàn tất',project.completedResponseCount,'Tổng thực từ các khảo sát liên kết','inbox','teal'],['Mã participant',project.participantCount,'Không chứa tên hoặc thông tin liên hệ','tag','amber'],['Cộng tác viên',project.members.length,'Researcher và Reviewer','users','rose']].map(k=>kpi(...k)).join('')}</div>
@@ -271,8 +304,8 @@ async function researchView(projectId){
     <div class="analytics-table-wrap" id="research-participant-list">${participants.length?`<table class="tbl"><thead><tr><th>Mã</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead><tbody>${participants.map(renderParticipantRow).join('')}</tbody></table>`:emptyState('Chưa có mã participant','Tạo mã ngẫu nhiên để theo dõi trạng thái tham gia trong nghiên cứu này. Mã không liên kết với câu trả lời.','','tag')}</div>
     ${participantTotal>participants.length?'<button class="btn research-load-more" id="research-participant-more">Tải thêm mã</button>':''}</section>
    ${canEdit?`<form id="research-edit-form" class="card research-edit-form"><h2>Thông tin nghiên cứu</h2><label>Tên<input class="in" name="title" maxlength="200" required value="${esc(project.title)}"></label><label>Mô tả<textarea name="description" maxlength="2000" rows="3">${esc(project.description||'')}</textarea></label><button class="btn pri" type="submit">Lưu thay đổi</button></form>`:''}
-   <section class="research-section"><div class="research-section-head"><div><h2>Khảo sát</h2><p class="research-muted">Một nghiên cứu có thể liên kết nhiều khảo sát hiện có.</p></div></div>
-    ${canEdit?`<form id="research-link-form" class="research-inline-form"><label class="sr-only" for="research-survey-select">Chọn khảo sát để liên kết</label><select class="sel" id="research-survey-select" ${available.length?'':'disabled'}><option value="">${available.length?'Chọn khảo sát của bạn':'Không có khảo sát khả dụng'}</option>${available.map(survey=>`<option value="${survey.id}">${esc(survey.title)}</option>`).join('')}</select><button class="btn pri" ${available.length?'':'disabled'}>Liên kết khảo sát</button></form>`:''}
+   <section class="research-section"><div class="research-section-head"><div><h2>Khảo sát</h2><p class="research-muted" style = "    color: white;">Một nghiên cứu có thể liên kết nhiều khảo sát hiện có.</p></div></div>
+    ${canEdit?`<form id="research-link-form" class="research-inline-form"><label class="sr-only" for="research-survey-select">Chọn khảo sát để liên kết</label><select class="sel" id="research-survey-select" ${available.length?'':'disabled'}><option value="">${available.length?'Chọn khảo sát của bạn':'Không có khảo sát khả dụng'}</option>${available.map(survey=>`<option value="${survey.id}">${esc(survey.title)}</option>`).join('')}</select><button class="btn" ${available.length?'':'disabled'}>Liên kết khảo sát</button></form>`:''}
     <div class="research-survey-list">${project.surveys.length?project.surveys.map(survey=>`<article class="research-survey-row"><div><a href="#/analytics/${survey.id}"><strong>${esc(survey.title)}</strong></a><small>${survey.status==='published'?'Đang thu thập':survey.status==='archived'?'Lưu trữ':'Bản nháp'} · Liên kết ${researchDate(survey.linkedAt)}</small></div><div class="research-row-actions"><a class="btn" href="#/analytics/${survey.id}">Phân tích</a>${isOwner||project.role==='researcher'?`<button class="btn" type="button" data-unlink="${survey.id}">Gỡ liên kết</button>`:''}</div></article>`).join(''):emptyState('Chưa liên kết khảo sát', canEdit?'Chọn một khảo sát từ danh sách bên trên để thêm dữ liệu vào nghiên cứu.':'Owner hoặc Researcher có thể liên kết khảo sát với nghiên cứu.','','link')}</div></section>
    <section class="research-section card research-versions"><div class="research-section-head"><div><h2>Phiên bản dataset</h2><p class="research-muted">Theo dõi số liệu và tính toàn vẹn của dữ liệu nghiên cứu theo thời điểm.</p></div>${canEdit?`<button class="btn pri" id="research-create-version" ${project.surveys.length?'':'disabled'}>Tạo phiên bản</button>`:''}</div>
     <p class="research-version-note">Lưu thời điểm, khảo sát, số lượng phản hồi và HMAC-SHA-256; câu trả lời không được sao chép và phiên bản không thể khôi phục dữ liệu. Giữ JWT_SECRET ổn định để so sánh checksum giữa các lần chụp.</p>
@@ -620,7 +653,7 @@ let cur=null,selI=0,mode='edit',dragI=null,saveT=null;
 async function builderView(id){
  if(!id){try{const l=(await api('GET','/surveys')).surveys;const s=l[0]||(await api('POST','/surveys',{title:'Khảo sát chưa đặt tên'})).survey;location.replace('#/builder/'+s.id)}catch(e){fail('builder',e)}return}
  loading('builder');
- try{cur=(await api('GET','/surveys/'+id)).survey;selI=0;mode='edit';builderRender()}catch(e){fail('builder',e,()=>builderView(id))}}
+ try{const got=await api('GET','/surveys/'+id);if(got.readOnly){location.replace('#/preview/'+id);return}cur=got.survey;selI=0;mode='edit';builderRender()}catch(e){fail('builder',e,()=>builderView(id))}}
 const pubLink=()=>`${location.origin}/#/s/${cur.public_slug}`;
 function builderRender(){
  shell('builder',`<div class="head"><div style="flex:1;min-width:260px"><input class="ttl" id="ttl" value="${esc(cur.title)}" maxlength="200" aria-label="Tên khảo sát"><p><span id="sv">Đã lưu</span> · <span id="qcount">${cur.questions.length} câu hỏi</span> · <span class="chip ${SL[cur.status][1]}">${SL[cur.status][0]}</span></p>
@@ -705,14 +738,14 @@ function drawPp(){
 /* ---------- Trải nghiệm người tham gia (công khai + xem trước) ---------- */
 async function surveyView(slug,previewId){
  const bare=h=>{app().className='app bare';app().innerHTML=h};
- let data;
- try{data=previewId?(await api('GET','/surveys/'+previewId)).survey:(await api('GET','/public/surveys/'+encodeURIComponent(slug))).survey}
+ let data,readOnlyPreview=false;
+ try{data=previewId?await(async()=>{const got=await api('GET','/surveys/'+previewId);readOnlyPreview=got.readOnly===true;return got.survey})():(await api('GET','/public/surveys/'+encodeURIComponent(slug))).survey}
  catch(e){bare(`<div class="sv"><section><div class="stage error-state" role="alert"><div class="error-mark" aria-hidden="true">!</div><h1>Không mở được khảo sát</h1><p class="hint">${esc(e.message)}</p><button class="btn pri" id="retry-survey">Thử lại</button></div></section></div>`);$('#retry-survey').onclick=()=>surveyView(slug,previewId);return}
  const qs=data.questions,S={i:-1,ans:{},rid:null,track:false,result:null};const trk=previewId?null:await Tracking.context(slug);
  const draw=()=>{
   const n=qs.length,w=S.i<0?0:Math.min(S.i,n)/n*100;let inner;
   if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p>${Tracking.introHtml(trk)}<p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
-  else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.doneHtml(trk,S)}${previewId?`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`:''}</div>`;
+  else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.bandHtml(S.result?.band)}${Tracking.doneHtml(trk,S)}${previewId?(readOnlyPreview?`<a class="btn" href="#/dashboard">Về tổng quan</a>`:`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`):''}</div>`;
   else{const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
   bare(`<div class="sv"><div class="top"><i style="width:${w}%"></i></div><nav>${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':''}</span></nav><section>${inner}</section>${credit}</div>`);
   Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
@@ -778,10 +811,10 @@ async function reportView(id,range={}){
 }
 async function analyticsView(id,range={}){
  loading('analytics');
- try{let list=(await api('GET','/surveys')).surveys;
+ try{let list=(await api('GET','/surveys?scope=all')).surveys;
   if(!id&&!list.length)list=(await api('GET','/research/surveys')).surveys;
   if(!id&&!list.length){shell('analytics',`<div class="head"><div><h1>Phân tích</h1><p>Thống kê và khám phá dữ liệu khảo sát.</p></div></div>${emptyState('Chưa có khảo sát để phân tích','Tạo khảo sát trước; phân tích sẽ dùng phản hồi thực sau khi người tham gia gửi câu trả lời.','<a class="btn pri" href="#/builder">Tạo khảo sát</a>')}`);return}
-  if(!id){id=(list.find(s=>s.response_count)||list[0]).id;history.replaceState(null,'','#/analytics/'+id)}
+  if(!id){id=(list.find(s=>s.mine!==false&&s.response_count)||list.find(s=>s.response_count)||list[0]).id;history.replaceState(null,'','#/analytics/'+id)}
   const rangeParams=new URLSearchParams(Object.entries(range).filter(([,value])=>value)),rangeQuery=rangeParams.toString();
   const [a,r]=await Promise.all([api('GET',`/analytics/survey/${id}${rangeQuery?'?'+rangeQuery:''}`),api('GET',`/responses/survey/${id}?page=1${rangeQuery?'&'+rangeQuery:''}`)]);
   if(!list.some(survey=>survey.id===id))list=[...list,a.survey];
@@ -826,7 +859,7 @@ async function analyticsView(id,range={}){
   const sectionHead=(title,description,meta='')=>`<div class="section-head"><div><h2>${title}</h2><p>${description}</p></div>${meta?`<span class="section-meta">${meta}</span>`:''}</div>`;
   shell('analytics',`<div class="head"><div><span class="eyebrow">Phân tích</span><h1>${esc(a.survey.title)}</h1><p>${a.completed.toLocaleString('vi')} phản hồi hoàn tất${hasRange?' trong kỳ đã chọn':''} · <span class="chip ${SL[a.survey.status]?.[1]||'c-end'}">${SL[a.survey.status]?.[0]||esc(a.survey.status)}</span></p></div>
   <div class="head-actions"><a class="btn" href="#/tracking/${encodeURIComponent(id)}">${svg('trend')}Theo dõi tiến triển</a>${canReview?`<button class="btn" type="button" id="jump-export">${svg('download')}Xuất dữ liệu</button>`:''}<a class="btn pri report-link" href="#/report/${encodeURIComponent(id)}${rangeQuery?'?'+rangeQuery:''}">${svg('printer')}Báo cáo PDF</a></div></div>
-  <div class="analytics-filters" role="group" aria-label="Bộ lọc phân tích"><label>Khảo sát<select class="sel" id="pick">${list.map(s=>`<option value="${s.id}" ${s.id==id?'selected':''}>${esc(s.title)}</option>`).join('')}</select></label><label>Từ ngày<input class="in" type="date" id="analytics-from" value="${esc(range.from||'')}"></label><label>Đến ngày<input class="in" type="date" id="analytics-to" value="${esc(range.to||'')}"></label>${hasRange?'<button class="btn" type="button" data-clear-range>Xóa lọc ngày</button>':'<span class="filter-hint">Ngày theo UTC</span>'}</div>
+  <div class="analytics-filters" role="group" aria-label="Bộ lọc phân tích"><label>Khảo sát<select class="sel" id="pick">${list.map(s=>`<option value="${s.id}" ${s.id==id?'selected':''}>${esc(s.title)}${s.owner&&s.mine===false?' — '+esc(s.owner):''}</option>`).join('')}</select></label><label>Từ ngày<input class="in" type="date" id="analytics-from" value="${esc(range.from||'')}"></label><label>Đến ngày<input class="in" type="date" id="analytics-to" value="${esc(range.to||'')}"></label>${hasRange?'<button class="btn" type="button" data-clear-range>Xóa lọc ngày</button>':'<span class="filter-hint">Ngày theo UTC</span>'}</div>
   <div class="grid g4">${[['Phản hồi',a.completed.toLocaleString('vi'),`${a.started} lượt bắt đầu${hasRange?' trong kỳ':''}`,'inbox',''],['Hoàn thành',a.completionRate+'%',`${a.cohortCompleted} / ${a.started} lượt bắt đầu đã hoàn tất`,'checkCircle','teal'],['Thời gian trung bình',fmt(a.avgDuration),'phút:giây mỗi phản hồi','clock','amber'],['Chất lượng phản hồi',a.normalRate==null?'—':a.normalRate+'%',`${a.review?.needs_review??(Q.suspicious+Q.spam)} cần xem xét · ${a.review?.excluded||0} đã loại`,'shield','rose']].map(k=>kpi(...k)).join('')}</div>
   ${noDataNotice}
   <section class="a-section">${sectionHead('Tổng quan phản hồi','Xu hướng thu thập theo ngày và tín hiệu sàng lọc tự động.')}

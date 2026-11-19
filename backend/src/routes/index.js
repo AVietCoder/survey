@@ -7,6 +7,7 @@ import * as pub from '../controllers/public.js'
 import * as responses from '../controllers/responses.js'
 import * as analytics from '../controllers/analytics.js'
 import * as admin from '../controllers/admin.js'
+import * as templates from '../controllers/templates.js'
 import * as researchProjects from '../controllers/research-projects.js'
 import * as exports from '../controllers/exports.js'
 import * as trackingCtl from '../controllers/tracking.js'
@@ -28,6 +29,8 @@ const s = Router().use(requireAuth)
 s.get('/', w(surveys.list)).post('/', w(surveys.create))
 s.get('/:id', w(surveys.get)).put('/:id', w(surveys.update)).delete('/:id', w(surveys.remove))
 r.use('/surveys', s)
+r.get('/templates', requireAuth, w(templates.list))
+r.post('/templates/:key/survey', requireAuth, limit(30), w(templates.createSurvey))
 
 const p = Router()
 p.get('/surveys/:slug', w(pub.getBySlug))

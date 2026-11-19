@@ -5,7 +5,7 @@ Express phục vụ luôn thư mục `frontend/` nên chỉ cần chạy **một
 
 ## Chạy thử
 
-1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `006_progress_tracking.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset; migration 006 thêm theo dõi tiến triển (xem mục riêng bên dưới, mặc định TẮT); migration 007 thêm nhật ký hoạt động cho admin (bảng `activity_logs`).
+1. Tạo project trên [supabase.com](https://supabase.com). Vào **SQL Editor** và chạy migration theo thứ tự: database mới chạy `backend/migrations/001_init.sql` đến `006_progress_tracking.sql`; database đã có thì chạy các migration còn thiếu. Migration 004 thêm quản lý nghiên cứu; migration 005 thêm metadata phiên bản dataset; migration 006 thêm theo dõi tiến triển (xem mục riêng bên dưới, mặc định TẮT); migration 007 thêm nhật ký hoạt động cho admin (bảng `activity_logs`); migration 008 thêm chia mức điểm (2–6 mức) cho theo dõi tiến triển (cần 006).
 2. Cấu hình môi trường:
    ```bash
    cd backend
@@ -163,3 +163,25 @@ Next.js: giữ nguyên `backend/`, bỏ đoạn `express.static` trong `app.js`,
 - **Nhật ký hoạt động** (Quản trị → Nhật ký, chỉ admin): đăng nhập/đăng xuất/đăng ký, tạo-sửa-xóa tài khoản, cấp/thu hồi admin, tạo/xuất bản/xóa khảo sát, đánh giá/xóa phản hồi, xuất CSV/XLSX. Lọc theo người thực hiện, nhóm hành động, khoảng ngày; phân trang 50 dòng. Không lưu mật khẩu, token hay mã khôi phục; IP chỉ lưu dạng băm. Ghi log lỗi không bao giờ làm hỏng thao tác chính. Cần chạy `backend/migrations/007_activity_logs.sql`; khi chưa chạy, trang Nhật ký hiển thị gợi ý (HTTP 503) và phần còn lại vẫn hoạt động.
 - **Bảng phản hồi (Phân tích)**: lọc phía server theo trạng thái review, cờ tự động, khoảng ngày, khoảng điểm chất lượng (0–100), sắp xếp theo thời điểm/thời gian/điểm. Ô "Tìm kiếm trong trang" vẫn chỉ lọc trên trang đang hiển thị.
 - **Danh sách khảo sát của admin**: thêm lọc theo ngày cập nhật (`?from=&to=`), `status`, `q` ở API.
+
+## Chia mức điểm (2–6 mức) — giai đoạn 1 của hệ thống điểm thưởng
+
+- Cấu hình ở trang "Theo dõi" của khảo sát, mục **Chia 3 mức điểm** (tùy chọn, mặc định tắt). Nhà nghiên cứu chọn hướng điểm (cao là tốt hơn hay cần hỗ trợ nhiều hơn), hai điểm cắt, tên 3 gói, có hiện tên gói cho người làm khảo sát hay không, và **kênh hỗ trợ cho nhóm đỏ (bắt buộc)**.
+- Hai điểm cắt tăng dần; điểm cắt là điểm **đầu tiên** của vùng cao hơn. Hệ thống kiểm tra ngưỡng nằm trong khoảng điểm đạt được và chỉ phân mức khi đủ câu trả lời.
+- Mức được tính **ngay lúc nộp bài**, không cần tạo hồ sơ theo dõi. Nhóm đỏ luôn thấy hộp "Cần người lắng nghe?" kể cả khi tên gói bị ẩn. Mức và ngưỡng đã dùng được lưu cố định trên từng phiên đã lưu.
+- Nhà nghiên cứu chỉ thấy số lượng theo mức dạng tổng hợp, ẩn khi dưới 5 người, và chỉ gồm các lần đo đã lưu vào hồ sơ theo dõi.
+- **Mức chỉ để gợi ý gói nhiệm vụ, không phải chẩn đoán.** Ngưỡng phải lấy từ công cụ đã được chuẩn hóa; hệ thống không tự suy ra.
+- Cần chạy `backend/migrations/008_score_bands.sql` (sau 006). Khảo sát không dùng tính năng này không phụ thuộc migration 008.
+- Bộ câu hỏi cần chốt trước các giai đoạn sau: `docs/reward-system-open-decisions.md` (và bản `.html`).
+
+### Số mức, thang chuẩn và mẫu khảo sát
+
+- Số mức từ **2 đến 6**; n-1 điểm cắt tăng dần, mỗi điểm cắt là điểm đầu tiên của vùng cao hơn. Tông màu đi từ ổn nhất đến cần hỗ trợ nhiều nhất; hộp hỗ trợ luôn hiện ở mức cần hỗ trợ nhiều nhất.
+- **Thang chuẩn** (Cách tính → "Thang chuẩn"): PSQI (7 thành phần, 0–21; ngưỡng công bố >5, người trưởng thành) và HCL-32 (đếm câu ĐÚNG, 0–32; ngưỡng công bố ≥14 cho bản gốc, bản tiếng Việt đã chỉnh lời nên cần kiểm chứng lại). Nút "Điền ngưỡng đã công bố" chỉ điền gợi ý; nhà nghiên cứu vẫn quyết định. Chỉ sàng lọc, không chẩn đoán. Thiếu hoặc không đọc được bất kỳ mục bắt buộc nào thì không chấm.
+- **Tạo từ mẫu**: Tổng quan → "Tạo từ mẫu" tạo bản nháp của chính bạn kèm cấu hình chấm điểm (đang tắt). Bỏ trường định danh (trung tâm, số thứ tự) của HCL-32 để giữ ẩn danh. Đưa mẫu vào hệ thống thật: `node scripts/seed-templates.js --user <username>` (`--list-users` để xem tài khoản).
+- Câu hỏi chọn một lưu **nhãn** của lựa chọn; cấu hình chấm điểm chụp ánh xạ nhãn → giá trị. Đổi tên lựa chọn rồi không lưu lại cấu hình sẽ khiến lần nộp đó không được chấm (an toàn, không chấm sai).
+
+### Mọi người xem khảo sát và nghiên cứu của nhau (chỉ đọc)
+
+- Mọi tài khoản đã đăng nhập xem được khảo sát (danh sách, câu hỏi qua xem trước), nghiên cứu, phản hồi và phân tích của nhau; **không** sửa, xóa, đánh giá, xuất file hay tạo phiên bản dataset. Vai trò mới `viewer` (chỉ đọc) nằm trong danh sách vai trò mặc định của các API đọc; mọi API ghi vẫn truyền danh sách vai trò tường minh.
+- Tổng quan mặc định hiện "Tất cả" (có nút "Của tôi"). Lưu ý riêng tư: phản hồi của người tham gia cũng hiển thị cho mọi tài khoản.

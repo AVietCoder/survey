@@ -20,51 +20,37 @@ function datasetVersionResult(result) {
   return ok(result)
 }
 
+/** Mọi tài khoản xem được khảo sát của nhau (chỉ đọc): trả toàn bộ kèm tên chủ sở hữu. */
 export async function listAccessibleSurveys(req, res) {
-  const [owned, memberships] = await Promise.all([
-    supabase.from('surveys').select('id,title,status,updated_at').eq('user_id', req.user.id),
-    supabase.from('research_project_members').select('project_id').eq('user_id', req.user.id)
-  ])
-  const projectIds = ok(memberships).map(member => member.project_id)
-  const links = projectIds.length
-    ? ok(await supabase.from('research_project_surveys').select('survey_id').in('project_id', projectIds))
-    : []
-  const sharedIds = [...new Set(links.map(link => link.survey_id))]
-  const shared = sharedIds.length
-    ? ok(await supabase.from('surveys').select('id,title,status,updated_at').in('id', sharedIds))
-    : []
-  const surveys = [...new Map([...ok(owned), ...shared].map(survey => [survey.id, survey])).values()]
-    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
-  res.json({ surveys })
+  const everySurvey = ok(await supabase.from('surveys').select('id,user_id,title,status,updated_at').order('updated_at', { ascending: false }).limit(500))
+  const ownerIds = [...new Set(everySurvey.map(item => item.user_id))]
+  const ownerRows = ownerIds.length ? ok(await supabase.from('users').select('id,username').in('id', ownerIds)) : []
+  const ownerNames = Object.fromEntries(ownerRows.map(row => [row.id, row.username]))
+  res.json({ surveys: everySurvey.map(({ user_id, ...survey }) => ({ ...survey, owner: ownerNames[user_id] || 'Không rõ', mine: user_id === req.user.id })) })
 }
 
+/** Mọi tài khoản xem được danh sách nghiên cứu của nhau (chỉ đọc); vai trò: owner / member / viewer. */
 export async function list(req, res) {
   const page = pageNumber(req.query.page)
   const limit = PAGE_SIZE
-  const end = page * limit - 1
-  const [ownedResult, memberResult] = await Promise.all([
-    supabase.from('research_projects').select('id,owner_id,title,description,status,created_at,updated_at', { count: 'exact' })
-      .eq('owner_id', req.user.id).order('updated_at', { ascending: false }).range(0, end),
-    supabase.from('research_project_members')
-      .select('project:research_projects!inner(id,owner_id,title,description,status,created_at,updated_at)', { count: 'exact' })
-      .eq('user_id', req.user.id).order('updated_at', { foreignTable: 'project', ascending: false }).range(0, end)
-  ])
-  const owned = ok(ownedResult)
-  const memberships = ok(memberResult).map(row => row.project).filter(Boolean)
-  const projects = [...new Map([...owned, ...memberships].map(project => [project.id, project])).values()]
-    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
-  const selected = projects.slice((page - 1) * limit, page * limit)
+  const result = await supabase.from('research_projects').select('id,owner_id,title,description,status,created_at,updated_at', { count: 'exact' })
+    .order('updated_at', { ascending: false }).range((page - 1) * limit, page * limit - 1)
+  const selected = ok(result)
   const selectedIds = selected.map(project => project.id)
-  const links = selectedIds.length
-    ? ok(await supabase.from('research_project_surveys').select('project_id').in('project_id', selectedIds))
-    : []
-  const surveyCounts = links.reduce((counts, row) => {
-    counts[row.project_id] = (counts[row.project_id] || 0) + 1
-    return counts
-  }, {})
+  const [links, memberships, owners] = await Promise.all([
+    selectedIds.length ? supabase.from('research_project_surveys').select('project_id').in('project_id', selectedIds) : { data: [], error: null },
+    selectedIds.length ? supabase.from('research_project_members').select('project_id').eq('user_id', req.user.id).in('project_id', selectedIds) : { data: [], error: null },
+    selected.length ? supabase.from('users').select('id,username').in('id', [...new Set(selected.map(project => project.owner_id))]) : { data: [], error: null }
+  ])
+  const surveyCounts = ok(links).reduce((counts, row) => { counts[row.project_id] = (counts[row.project_id] || 0) + 1; return counts }, {})
+  const memberOf = new Set(ok(memberships).map(row => row.project_id))
+  const ownerNames = Object.fromEntries(ok(owners).map(row => [row.id, row.username]))
   res.json({
-    projects: selected.map(project => ({ ...project, role: project.owner_id === req.user.id ? 'owner' : 'member', surveyCount: surveyCounts[project.id] || 0 })),
-    page, pageSize: limit, total: (ownedResult.count || 0) + (memberResult.count || 0)
+    projects: selected.map(project => ({
+      ...project, role: project.owner_id === req.user.id ? 'owner' : memberOf.has(project.id) ? 'member' : 'viewer',
+      owner: ownerNames[project.owner_id] || 'Không rõ', surveyCount: surveyCounts[project.id] || 0
+    })),
+    page, pageSize: limit, total: result.count
   })
 }
 

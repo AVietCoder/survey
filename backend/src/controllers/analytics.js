@@ -297,6 +297,6 @@ export async function bySurvey(req, res) {
   const by = {}; rows.forEach(r => (by[r.question_id] ||= []).push(r.answer_value))
   const signalCounts = {}
   rs.filter(r => r.submitted_at).forEach(r => (r.signals || []).forEach(x => signalCounts[x.code] = (signalCounts[x.code] || 0) + 1))
-  res.json({ survey: { id: s.id, title: s.title, status: s.status, public_slug: s.public_slug }, canReview: role !== 'reviewer', ...summarize(rs, range, startedCount, cohortCompletedCount), signalCounts,
+  res.json({ survey: { id: s.id, title: s.title, status: s.status, public_slug: s.public_slug }, canReview: role === 'owner' || role === 'researcher', ...summarize(rs, range, startedCount, cohortCompletedCount), signalCounts,
     range: { from: range.from, to: range.to }, eligibleResponses: eligibleCount, questions: questions.map(q => questionStats(q, by[q.id] || [], eligibleCount)) })
 }

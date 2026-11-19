@@ -41,7 +41,7 @@ export async function listBySurvey(req, res) {
   if (maxScore !== null) query = query.lte('quality_score', maxScore)
   const result = await query.range((page - 1) * pageSize, page * pageSize - 1)
   const responses = ok(result)
-  res.json({ responses, total: result.count, page, pageSize, canReview: role !== 'reviewer' })
+  res.json({ responses, total: result.count, page, pageSize, canReview: role === 'owner' || role === 'researcher' })
 }
 
 export async function review(req, res) {

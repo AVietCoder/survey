@@ -1353,3 +1353,15 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]){min-height:40px}
 .survey-filters{padding:0 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px 16px;align-items:end;margin:0 0 18px}
 .survey-filters .resp-f .in,.survey-filters .resp-f .ui-select{width:100%;min-width:0}
 .survey-filters .btn{width:100%}
+
+/* ---------- Hộp thoại "Tạo từ mẫu" ---------- */
+.template-dialog{max-width:min(720px,calc(100vw - 24px))}
+.template-dialog .dialog-content{max-height:calc(100dvh - 48px);overflow:auto}
+.tpl-lead{margin:0 0 16px;color:var(--text-muted)}
+.tpl-list{display:grid;gap:14px;margin-bottom:18px}
+.tpl-card{padding:18px;border-radius:var(--r-xl);background:var(--brand-50)}
+.tpl-card h3{margin:0 0 8px;font:800 1.05rem/1.3 var(--font);color:var(--text)}
+.tpl-card p{margin:0 0 8px;color:var(--text-muted);font:600 .9375rem/1.5 var(--font)}
+.tpl-card .tpl-note{font-size:.875rem}
+.tpl-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
+.tpl-foot small{color:var(--text-muted);font-weight:800}

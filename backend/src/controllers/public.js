@@ -57,5 +57,7 @@ export async function submit(req, res) {
       survey: s, response: { id: resp.id, submitted_at: now.toISOString() }, answers, cookieToken: req.cookies?.[COOKIE_NAME]
     })
     : null
-  res.status(201).json({ ok: true, responseId: resp.id, ...(trackingResult ? { tracking: trackingResult } : {}) })   // không trả điểm chất lượng cho người tham gia
+  // Mức điểm (xanh/vàng/đỏ): luôn tính khi khảo sát đã cấu hình, không cần hồ sơ theo dõi
+  const band = await tracking.bandForSubmit({ survey: s, answers })
+  res.status(201).json({ ok: true, responseId: resp.id, ...(trackingResult ? { tracking: trackingResult } : {}), ...(band ? { band } : {}) })   // không trả điểm chất lượng cho người tham gia
 }
