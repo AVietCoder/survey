@@ -100,6 +100,8 @@ const tr = Router().use(requireAuth)
 tr.get('/surveys/:surveyId/config', w(trackingCtl.getConfig))
 tr.put('/surveys/:surveyId/config', limit(60), w(trackingCtl.putConfig))
 tr.get('/surveys/:surveyId/summary', w(trackingCtl.getSummary))
+tr.get('/surveys/:surveyId/tasks', w(rewards.surveyTasks)).post('/surveys/:surveyId/tasks', limit(60), w(rewards.createSurveyTask))
+tr.put('/surveys/:surveyId/tasks/:taskId', limit(60), w(rewards.updateSurveyTask))
 r.use('/tracking', tr)
 
 const ad = Router().use(requireAuth, requireAdmin)

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
 
@@ -59,6 +60,13 @@ function itemResult(result) {
   return ok(result)
 }
 
+const SCHEDULE_COLUMNS = /survey_id|start_day|end_day/i
+const scheduleMissing = result => ['PGRST204', '42703'].includes(result?.error?.code) && SCHEDULE_COLUMNS.test(result.error.message || '')
+function scheduleResult(result) {
+  if (scheduleMissing(result)) throw new HttpError(503, 'Chạy backend/migrations/021_survey_reward_tasks.sql để dùng nhiệm vụ riêng và lịch theo ngày')
+  return taskGameResult(result)
+}
+
 function taskGameResult(result) {
   if (result?.error?.code === 'PGRST204' && /game/i.test(result.error.message || ''))
     throw new HttpError(503, 'Chạy backend/migrations/013_reward_task_games.sql để bật mini-game')
@@ -71,7 +79,7 @@ async function taskMutation(run, row) {
     const { game: _unused, ...legacyRow } = row
     return rewardResult(await run(legacyRow))
   }
-  return taskGameResult(result)
+  return scheduleResult(result)
 }
 
 const asDate = value => String(value).slice(0, 10)
@@ -144,6 +152,21 @@ export function currentGroup(sessions, cycleDays = DEFAULT_SETTINGS.cycle_days) 
   return anchor ? { tier: tierOf(anchor), session: anchor } : null
 }
 
+/** Ngày thứ N của chương trình: ngày 1 = ngày (giờ địa phương) của lần đánh giá xác định nhóm. Không bao giờ nhỏ hơn 1. */
+export function programDay(startedAt, today, timeZone = DEFAULT_SETTINGS.timezone) {
+  const first = localParts(new Date(startedAt), timeZone).date
+  const diff = Math.round((new Date(`${today}T00:00:00Z`) - new Date(`${first}T00:00:00Z`)) / 86400000)
+  return Math.max(1, diff + 1)
+}
+
+export const inDays = (task, day) => (task.start_day == null || day >= task.start_day) && (task.end_day == null || day <= task.end_day)
+
+/** Nhiệm vụ áp dụng cho một khảo sát: nếu khảo sát có nhiệm vụ riêng đang bật thì CHỈ dùng chúng, không trộn với bộ chung. */
+export function taskPool(activeTasks, surveyId) {
+  const own = activeTasks.filter(task => task.survey_id && task.survey_id === surveyId)
+  return own.length ? own : activeTasks.filter(task => !task.survey_id)
+}
+
 /* ------------------------------------------------------------------ kiểm tra dữ liệu */
 const text = (value, label, max, { required = false } = {}) => {
   const out = String(value ?? '').trim()
@@ -183,6 +206,9 @@ export function normalizeTask(input, existing = {}) {
     is_active: merged.is_active !== false, is_placeholder: merged.is_placeholder !== false,
     sort_order: integer(merged.sort_order ?? 0, 'Thứ tự', -1000, 1000), game: merged.game || null
   }
+  const startDay = optionalInteger(merged.start_day, 'Ngày bắt đầu', 1, 365), endDay = optionalInteger(merged.end_day, 'Ngày kết thúc', 1, 365)
+  if (startDay !== null && endDay !== null && endDay < startDay) throw new HttpError(400, 'Ngày kết thúc phải từ ngày bắt đầu trở đi')
+  if (startDay !== null || endDay !== null || 'start_day' in existing) { row.start_day = startDay; row.end_day = endDay }
   if (row.game && !REWARD_GAMES.includes(row.game)) throw new HttpError(400, 'Mini-game không hợp lệ')
   if ((row.game === 'breathing' || row.game === 'rest_timer') && type !== 'timer' || row.game === 'three_plans' && type !== 'count_chars')
     throw new HttpError(400, 'Mini-game không khớp với cách xác minh của nhiệm vụ')
@@ -287,6 +313,29 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     if (!existing) throw new HttpError(404, 'Không tìm thấy nhiệm vụ')
     const row = normalizeTask({ ...input, code: existing.code }, existing)          // mã nhiệm vụ không đổi để lịch sử điểm nhất quán
     return taskMutation(values => db.from('reward_tasks').update(values).eq('id', id).select('*').single(), { ...row, updated_at: now().toISOString() })
+  }
+
+  /* ---- nhiệm vụ riêng của từng khảo sát (migration 021): mã do máy chủ sinh, không xóa chỉ ẩn */
+  const sortSchedule = list => [...list].sort((a, b) => (a.start_day ?? 0) - (b.start_day ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0) || String(a.code).localeCompare(String(b.code)))
+
+  async function listSurveyTasks(surveyId) {
+    const probe = await db.from('reward_tasks').select('survey_id').limit(1)
+    if (scheduleMissing(probe)) return { available: false, tasks: [] }
+    const rows = q(await db.from('reward_tasks').select('*'))
+    return { available: true, tasks: sortSchedule(rows.filter(task => task.survey_id === surveyId)) }
+  }
+
+  async function createSurveyTask(surveyId, input, userId) {
+    const code = `S${randomBytes(3).toString('hex')}-${Math.floor(Math.random() * 90 + 10)}`
+    const row = normalizeTask({ ...input, code, is_placeholder: input?.is_placeholder })
+    return taskMutation(values => db.from('reward_tasks').insert(values).select('*').single(), { ...row, survey_id: surveyId, created_by: userId })
+  }
+
+  async function updateSurveyTask(surveyId, taskId, input) {
+    const existing = q(await db.from('reward_tasks').select('*').eq('id', taskId).maybeSingle())
+    if (!existing || existing.survey_id !== surveyId) throw new HttpError(404, 'Không tìm thấy nhiệm vụ của khảo sát này')
+    const row = normalizeTask({ ...input, code: existing.code }, existing)
+    return taskMutation(values => db.from('reward_tasks').update(values).eq('id', taskId).select('*').single(), { ...row, updated_at: now().toISOString() })
   }
 
   /* ---- kho vật phẩm: mở khóa theo Sao đã tích lũy, không tiêu điểm */
@@ -419,7 +468,7 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     if (!group) return null
     const config = q(await db.from('survey_tracking_configs').select('rewards_enabled,bands').eq('survey_id', group.session.survey_id).maybeSingle())
     // Kênh hỗ trợ do nhà nghiên cứu cấu hình (bắt buộc khi bật mức điểm); không bao giờ tự tạo thông tin liên hệ
-    return { tier: group.tier, enabled: config?.rewards_enabled === true, surveyId: group.session.survey_id, support: config?.bands?.supportText || null }
+    return { tier: group.tier, enabled: config?.rewards_enabled === true, surveyId: group.session.survey_id, startedAt: group.session.completed_at, support: config?.bands?.supportText || null }
   }
 
   async function totals(profileId, today) {
@@ -437,7 +486,7 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     code: task.code, name: task.name, description: task.description, instructions: task.instructions, points: task.points, game: task.game || null,
     completionType: task.completion_type, minSeconds: task.min_seconds, minCount: task.min_count, choices: task.choices,
     window: task.window_start ? { start: task.window_start, end: task.window_end } : null, timesPerDay: task.times_per_day,
-    durationMinutes: task.duration_minutes, placeholder: task.is_placeholder, ...state
+    durationMinutes: task.duration_minutes, placeholder: task.is_placeholder, days: task.start_day || task.end_day ? { start: task.start_day ?? null, end: task.end_day ?? null } : null, ...state
   })
 
   /** Màn hình "hôm nay": nhóm, điểm, trần còn lại và danh sách nhiệm vụ. Không bao giờ phạt hay đếm số ngày bỏ lỡ. */
@@ -452,8 +501,10 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     if (settings.streak_enabled === true) streak = await getStreak(profileId, moment.date, settings)
     const sums = await totals(profileId, moment.date)
     const done = q(await db.from('reward_completions').select('task_id,slot').eq('profile_id', profileId).eq('local_date', moment.date))
-    const tasks = (await listTasks({ onlyActive: true })).filter(task => task.audience.includes(group.tier))
+    const programDayNow = programDay(group.startedAt, moment.date, settings.timezone)
+    const tasks = taskPool(await listTasks({ onlyActive: true }), group.surveyId).filter(task => task.audience.includes(group.tier) && inDays(task, programDayNow))
     return {
+      programDay: programDayNow,
       unit, enabled: true, group: { tier: group.tier, label: settings.group_labels[group.tier] },
       ...(streak ? { streak } : {}),
       balance: sums.balance, support: group.support,
@@ -510,9 +561,11 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     const settings = await getSettings()
     const group = await groupFor(profileId, settings)
     if (!group?.enabled) throw new HttpError(403, 'Hệ thống nhiệm vụ chưa được bật cho hồ sơ này')
-    const task = q(await db.from('reward_tasks').select('*').eq('code', String(code || '')).eq('is_active', true).maybeSingle())
+    const moment = localParts(now(), settings.timezone)
+    const task = taskPool(await listTasks({ onlyActive: true }), group.surveyId).find(item => item.code === String(code || ''))
     if (!task || !task.audience.includes(group.tier)) throw new HttpError(404, 'Không tìm thấy nhiệm vụ')
-    return { settings, group, task, moment: localParts(now(), settings.timezone) }
+    if (!inDays(task, programDay(group.startedAt, moment.date, settings.timezone))) throw new HttpError(409, 'Nhiệm vụ này không nằm trong lịch của ngày hôm nay')
+    return { settings, group, task, moment }
   }
 
   const assertWindow = (task, moment) => {
@@ -580,7 +633,7 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
   }
 
   return {
-    getSettings, saveSettings, listTasks, createTask, updateTask, listItems, createItem, updateItem,
+    getSettings, saveSettings, listTasks, createTask, updateTask, listSurveyTasks, createSurveyTask, updateSurveyTask, listItems, createItem, updateItem,
     today, start, cancelStart, complete, useRestCard, inventory, village, equip, setReminders, groupFor
   }
 }

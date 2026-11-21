@@ -29,6 +29,8 @@ export const ACTION_LABELS = {
   'reward.settings': 'Sửa cấu hình điểm thưởng',
   'reward.task_create': 'Tạo nhiệm vụ',
   'reward.task_update': 'Sửa nhiệm vụ',
+  'reward.survey_task_create': 'Tạo nhiệm vụ riêng của khảo sát',
+  'reward.survey_task_update': 'Sửa nhiệm vụ riêng của khảo sát',
   'reward.item_create': 'Tạo vật phẩm thưởng',
   'reward.item_update': 'Sửa vật phẩm thưởng',
   'export.csv': 'Xuất CSV',

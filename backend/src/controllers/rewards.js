@@ -2,6 +2,7 @@ import { supabase } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
 import { createRewardService } from '../services/reward.js'
 import { logActivity } from '../services/activity.js'
+import { resolveSurveyAccess, canEditConfig } from './tracking.js'
 
 export let reward = createRewardService(supabase)
 /** Chỉ dùng trong test: thay service bằng bản chạy trên DB giả/đồng hồ giả. */
@@ -54,7 +55,7 @@ export async function adminSaveSettings(req, res) {
   await logActivity(req, 'reward.settings', { type: 'reward_settings', id: 'global' }, { fields: Object.keys(req.body || {}) })
   res.json({ settings })
 }
-export async function adminTasks(_req, res) { res.json({ tasks: await reward.listTasks() }) }
+export async function adminTasks(_req, res) { res.json({ tasks: (await reward.listTasks()).filter(task => !task.survey_id) }) }   // nhiệm vụ riêng của khảo sát quản lý ở trang theo dõi
 export async function adminCreateTask(req, res) {
   const task = await reward.createTask(req.body || {}, req.user.id)
   await logActivity(req, 'reward.task_create', { type: 'reward_task', id: task.id, label: task.code })
@@ -77,4 +78,30 @@ export async function adminUpdateItem(req, res) {
   const item = await reward.updateItem(req.params.id, req.body || {})
   await logActivity(req, 'reward.item_update', { type: 'reward_item', id: item.id, label: item.code }, { fields: Object.keys(req.body || {}), active: item.is_active })
   res.json({ item })
+}
+
+/* ---- nhiệm vụ riêng của khảo sát + lịch theo ngày (migration 021). Chỉ chủ sở hữu khảo sát được ghi, như cấu hình theo dõi. */
+export async function surveyTasks(req, res) {
+  const { survey, role } = await resolveSurveyAccess(req.params.surveyId, req.user)
+  const listed = await reward.listSurveyTasks(survey.id)
+  const settings = await reward.getSettings()
+  res.json({ ...listed, role, canEdit: canEditConfig(role), cycleDays: settings.cycle_days, groupLabels: settings.group_labels, unit: { name: settings.unit_name, icon: settings.unit_icon } })
+}
+async function ownedSurvey(req) {
+  const { survey, role } = await resolveSurveyAccess(req.params.surveyId, req.user)
+  if (!canEditConfig(role)) throw new HttpError(403, 'Chỉ chủ sở hữu khảo sát mới được thay đổi nhiệm vụ')
+  return survey
+}
+export async function createSurveyTask(req, res) {
+  const survey = await ownedSurvey(req)
+  const task = await reward.createSurveyTask(survey.id, req.body || {}, req.user.id)
+  await logActivity(req, 'reward.survey_task_create', { type: 'survey', id: survey.id, label: survey.title }, { task: task.code })
+  res.status(201).json({ task })
+}
+export async function updateSurveyTask(req, res) {
+  const survey = await ownedSurvey(req)
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.taskId || '')) throw new HttpError(404, 'Không tìm thấy nhiệm vụ')
+  const task = await reward.updateSurveyTask(survey.id, req.params.taskId, req.body || {})
+  await logActivity(req, 'reward.survey_task_update', { type: 'survey', id: survey.id, label: survey.title }, { task: task.code, fields: Object.keys(req.body || {}), active: task.is_active })
+  res.json({ task })
 }

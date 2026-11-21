@@ -47,7 +47,7 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
     }
     run() {
       const failure = failures.find(item => item.test(this.table, this.op))
-      if (failure) return { data: null, error: { code: failure.code, message: 'fake failure' } }
+      if (failure) return { data: null, error: { code: failure.code, message: failure.message || 'fake failure' } }
       if (this.op === 'insert') {
         const created = []
         for (const input of Array.isArray(this.payload) ? this.payload : [this.payload]) {
@@ -85,7 +85,7 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
   return {
     from: table => new Query(table),
     tables, rowsOf,
-    failWhen: (test, code = 'XX000') => failures.push({ test, code }),
+    failWhen: (test, code = 'XX000', message) => failures.push({ test, code, message }),
     clearFailures: () => { failures.length = 0 }
   }
 }
