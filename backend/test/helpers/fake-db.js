@@ -91,8 +91,8 @@ export function createFakeDb(seed = {}, { unique = {}, cascade = {} } = {}) {
 }
 
 export const TRACKING_CONSTRAINTS = {
-  unique: { tracking_credentials: [['token_hash']], tracking_sessions: [['response_id']] },
+  unique: { tracking_credentials: [['token_hash']], tracking_sessions: [['response_id']], tracking_accounts: [['profile_id'], ['username']] },
   cascade: {
-    tracking_profiles: [['tracking_credentials', 'profile_id'], ['tracking_consents', 'profile_id'], ['tracking_sessions', 'profile_id']]
+    tracking_profiles: [['tracking_credentials', 'profile_id'], ['tracking_consents', 'profile_id'], ['tracking_sessions', 'profile_id'], ['tracking_accounts', 'profile_id']]
   }
 }

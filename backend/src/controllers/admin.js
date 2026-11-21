@@ -4,6 +4,12 @@ import { HttpError } from '../middleware/auth.js'
 import { listActivity, logActivity } from '../services/activity.js'
 import { applyDateRange, getDateRange } from '../services/date-range.js'
 import { loadQuestions, newSlug, saveQuestions, withQuestions } from '../services/surveys.js'
+import { getSharedSurveyEditing, saveSharedSurveyEditing } from '../services/shared-editing.js'
+import { createSurveyVotesService } from '../services/survey-votes.js'
+
+export let surveyVotes = createSurveyVotesService(supabase)
+/** Chỉ dùng trong test: thay service bằng bản chạy trên DB giả. */
+export function useSurveyVotes(service) { surveyVotes = service }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const STATUSES = ['draft', 'published', 'archived']
@@ -257,4 +263,30 @@ export async function removeResponse(req, res) {
 
 export async function activity(req, res) {
   res.json(await listActivity(req.query))
+}
+
+export async function sharedEditingSettings(_req, res) {
+  res.json({ settings: await getSharedSurveyEditing() })
+}
+
+export async function saveSharedEditingSettings(req, res) {
+  const settings = await saveSharedSurveyEditing(req.body?.enabled, req.user.id)
+  await logActivity(req, 'settings.shared_survey_editing', { type: 'app_setting', id: 'global' }, { enabled: settings.enabled })
+  res.json({ settings })
+}
+
+/* ---------- khảo sát mặc định: mỗi admin một phiếu (migration 020) ---------- */
+export async function surveyVotesList(req, res) {
+  res.json(await surveyVotes.tally(req.user.id))
+}
+export async function surveyVotesCast(req, res) {
+  if (!UUID.test(String(req.body?.surveyId || ''))) throw new HttpError(400, 'Mã khảo sát không hợp lệ')
+  const survey = await surveyVotes.vote(req.user.id, req.body.surveyId)
+  await logActivity(req, 'survey.vote', { type: 'survey', id: survey.id, label: survey.title })
+  res.json(await surveyVotes.tally(req.user.id))
+}
+export async function surveyVotesClear(req, res) {
+  await surveyVotes.clearVote(req.user.id)
+  await logActivity(req, 'survey.vote_clear', { type: 'user', id: req.user.id })
+  res.json(await surveyVotes.tally(req.user.id))
 }

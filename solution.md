@@ -39,3 +39,15 @@ R-01:
 - Rút khỏi việc kh quan trọng \-\> ghi tên hđ (vd: hoãn cuộc học với abcxyz)
 
 \*dựa vào timestamp nữa (nếu như ng dùng khai báo đã cắt giảm việc mà tgian online nhiều hơn \-\> gắn cờ \-\> báo lỗi,...)  
+
+Cơ chế reward system:
+1) Setup tài khoản (Đăng nhập = mail/etc., tài khoản khách cũng được miễn có thể cá nhân hoá + có cái để mình track là được t hỏng rành lắm): Đặt tên
+
+2) Chọn nhân vật: Có thể cho chọn làm người/thú vật gì cũng được + Customize nhân vật siêu cấp siêu đơn giản 
+
+3) Cơ chế: 
+- Đại khái cái reward system này sẽ vận hành theo kiểu vòng đời của cái nhân vật đó á, tụi bây biết kiểu bitlife hông, thì cái này nó cũng tựa tựa z nma nó hong có bị fast-paced giống bitlife. Tại vì nếu mấy cái giải pháp của mình thiết kế theo lộ trình (phải duy trì trong X thời gian hay gì đó) thì người dùng phải hoàn thành đủ cái lộ trình đó để chơi xong 1 vòng đời của nhân vật. 
+
+- CƠ CHẾ LẤY ĐIỂM + SỬ DỤNG ĐIỂM: Mỗi ngày sau khi mà hoàn thành xong những cái task thì người dùng sẽ được tích điểm cho mỗi task làm được (dưới hình thức là stars hay cgi đó tính sau), số điểm nhận dc cho mỗi task thì nó sẽ vary tuỳ theo độ khó. Mấy cái điểm đó sẽ dc tích luỹ để phục vụ cho việc chơi game, cụ thể là lựa chọn bước đi tiếp theo trong cuộc sống của nhân vật (kiểu chọn trường học = 10 điểm, chọn người yêu = 5 điểm) và mấy cái lựa chọn này nó sẽ được mở khoá dần theo sự phát triển vòng đời của nhân vật, nếu có điểm để chọn liền thì chọn còn ko thì nó sẽ nằm ở đó (cơ chế game)
+
+- CƠ CHẾ PHÁT TRIỂN VÒNG ĐỜI: Để mà thời gian vòng đời của nhân vật progress thì người dùng phải đăng nhập game để check in, thì 1 ngày đăng nhập sẽ = ??? thời gian trong game (tuỳ thuộc vào cách mình thiết kế lộ trình). Ko đăng nhập = lộ trình không tiếp tục. Bên cạnh đó thì cái việc đăng nhập liên tục mỗi ngày nó sẽ tạo 1 cái chuỗi từ ngày thứ 3 (Kiểu duolingo), cái chuỗi đó thì nó sẽ cho m quy đổi thành trang phục/mấy cái phụ kiện vui vẻ vui vẻ có khả năng tạo ra dopamine cho ng chơi

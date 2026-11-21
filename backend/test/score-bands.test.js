@@ -223,3 +223,14 @@ test('researcher aggregate counts per level hide small groups', async () => {
   assert.deepEqual(summary.bands.levels.map(level => level.count), [null, MIN_GROUP_SIZE, null], 'cells under the minimum are hidden')
   assert.deepEqual(summary.bands.levels.map(level => level.label), ['Gói Giữ nhịp', 'Gói Chỉnh nhịp', 'Gói Hạ nhiệt'])
 })
+
+test('rewards can only be switched on together with levels and a support channel', async () => {
+  const { db, service } = await boot({ withBands: false })
+  const save = body => service.saveConfig({ survey: db.rowsOf('surveys')[0], userId: OWNER, questions: db.rowsOf('questions'), body })
+  await assert.rejects(save({ rewardsEnabled: true }), /chia mức điểm/)
+  assert.equal('rewards_enabled' in db.rowsOf('survey_tracking_configs')[0], false, 'column untouched when not requested (works before migration 009)')
+  const saved = await save({ bands: valid(), rewardsEnabled: true })
+  assert.equal(saved.rewards_enabled, true)
+  assert.equal((await save({ rewardsEnabled: false })).rewards_enabled, false)
+  assert.equal(service.serializeConfig(await service.getConfig(SURVEY), db.rowsOf('questions')).rewardsEnabled, false)
+})

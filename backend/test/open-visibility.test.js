@@ -58,14 +58,16 @@ test('the default survey list stays personal, scope=all shows everyone with owne
   } finally { app.close() }
 })
 
-test('another user can open a survey read-only but cannot edit or delete it', async () => {
+test('another user can open a survey read-only but cannot edit or delete it (shared editing off)', async () => {
   const app = await boot()
+  // Quyền sửa dùng chung (migration 011) mặc định bật; khi admin tắt thì người khác chỉ được xem.
+  app.db.rowsOf('app_settings').push({ id: 'global', shared_survey_editing: false })
   try {
     const seen = await app.call('GET', `/surveys/${S_BOB}`, { cookie: asAlice })
     assert.equal(seen.status, 200); assert.equal(seen.json.readOnly, true); assert.equal(seen.json.survey.owner, 'bob')
     assert.equal(seen.json.survey.questions.length, 1); assert.equal('user_id' in seen.json.survey, false)
     const own = await app.call('GET', `/surveys/${S_BOB}`, { cookie: asBob })
-    assert.equal(own.json.readOnly, undefined)
+    assert.equal(own.json.readOnly, false)
     assert.equal((await app.call('PUT', `/surveys/${S_BOB}`, { cookie: asAlice, body: { title: 'hack' } })).status, 404)
     assert.equal((await app.call('DELETE', `/surveys/${S_BOB}`, { cookie: asAlice })).status, 404)
     assert.equal(app.db.rowsOf('surveys').find(item => item.id === S_BOB).title, 'Khảo sát của Bob')

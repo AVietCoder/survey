@@ -1365,3 +1365,61 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]){min-height:40px}
 .tpl-card .tpl-note{font-size:.875rem}
 .tpl-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
 .tpl-foot small{color:var(--text-muted);font-weight:800}
+
+/* ---------- Quản trị điểm thưởng ---------- */
+.reward-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 16px;align-items:end}
+.reward-form .err,.reward-form .btn{grid-column:1/-1}
+.reward-form .btn{justify-self:start}
+.task-dialog{max-width:min(720px,calc(100vw - 24px))}
+.task-dialog .dialog-content{max-height:calc(100dvh - 48px);overflow:auto;display:grid;gap:14px}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 14px}
+.task-grid label,.task-dialog label{display:grid;gap:6px;min-width:0}
+.task-tiers{display:flex;flex-wrap:wrap;gap:12px 20px;border:2px solid var(--line);border-radius:var(--r-lg);padding:12px 16px}
+.task-tiers legend{padding:0 8px;font-weight:800;color:var(--text-muted)}
+.task-dialog .tk-check{display:flex;align-items:flex-start;gap:10px}
+.admin-table td:first-child strong{white-space:nowrap}
+#task-add{white-space:nowrap}
+
+/* ---------- Bộ chọn giờ trong khảo sát ---------- */
+.tpick{display:grid;gap:12px;max-width:420px}
+.tpick-val{font-size:1.5rem;font-weight:800;letter-spacing:.04em;text-align:center;min-height:60px}
+.tpick-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tpick-row .sel{flex:1 1 90px;min-height:var(--tap,44px)}
+.tpick-row b{font-size:1.25rem;color:var(--text-muted)}
+.tpick-quick{display:flex;gap:8px;flex-wrap:wrap}
+.chip-btn{min-height:var(--tap,44px);padding:0 16px;border:1px solid var(--brand-100);border-radius:var(--r-pill);background:var(--brand-50);color:var(--brand-700);font:700 .95rem var(--font);cursor:pointer;transition:background .15s,border-color .15s}
+.chip-btn:hover{background:var(--brand-100)}
+.chip-btn:focus-visible{outline:3px solid var(--brand-300);outline-offset:2px}
+.tk-has-account{margin:0 0 12px;border-radius:var(--r-md);background:var(--brand-50);padding:0 14px}
+.tk-has-account summary{cursor:pointer;min-height:var(--tap,44px);display:flex;align-items:center;font-weight:800;color:var(--brand-700)}
+.tk-has-account .tk-form{padding-bottom:14px}
+.tpick .tpick-row select.sel{width:auto;min-width:0;flex:1 1 96px}
+.tpick .tpick-row{flex-wrap:nowrap}
+.tpick .tpick-row select.sel{flex:1 1 0}
+.chip-now{background:#fff;border-color:var(--brand-300)}
+
+/* ---------- Trang chủ một khảo sát + bình chọn admin ---------- */
+.home-links{display:inline-flex;gap:8px;align-items:center}
+.home-links a{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 14px;border-radius:var(--r-pill);background:rgba(255,255,255,.14);color:var(--on-brand,#fff);font-weight:700;text-decoration:none}
+.home-links a:hover{background:rgba(255,255,255,.24)}
+.home-links a:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.vote-now{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:4px 0 16px;padding:14px 16px;border-radius:var(--r-lg);background:var(--brand-50)}
+.vote-now.is-empty{flex-direction:column;align-items:flex-start;gap:4px}
+.vote-list{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
+.vote-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--brand-100);border-radius:var(--r-lg);background:#fff}
+.vote-list li.is-mine{border-color:var(--brand-500);box-shadow:0 0 0 2px var(--brand-100)}
+.vote-list small{display:block;color:var(--text-muted)}
+.stage .tk-note{margin-bottom:18px}
+.home-links a{white-space:nowrap}
+
+/* ---------- Researcher dashboard: căn đều chiều cao ô lọc, lưới lọc gọn, admin mobile ---------- */
+.survey-filters .in,.survey-filters .ui-select-trigger,.survey-filters .sel,.survey-filters .btn,
+.response-card .review-tools .in,.response-card .review-tools .ui-select-trigger,.response-card .review-tools .sel,.response-card .review-tools .btn{height:48px;min-height:48px;box-sizing:border-box}
+.survey-filters .resp-f,.response-card .review-tools .resp-f{align-content:end}
+.vote-list .btn{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){.admin-topbar .admin-top-link{display:none}}
+.survey-filters .resp-f>*,.response-card .review-tools .resp-f>*{margin:0}
+.survey-filters>.btn,.response-card .review-tools>.btn{margin:0;align-self:end}
+@media(max-width:640px){.admin-topbar:has(.admin-quick-search[hidden]){display:none}}
+.page-analytics .response-card .review-tools,.response-card .review-tools{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.page-analytics .response-card .review-tools .in,.page-analytics .response-card .review-tools .ui-select-trigger,.page-analytics .response-card .review-tools .sel{height:48px;min-height:48px}

@@ -64,7 +64,7 @@ backend/
 
 Các endpoint `/api/admin/*` cần đăng nhập và cờ admin; tài khoản thường nhận `403`. Trang quản trị hỗ trợ tạo/sửa/xóa tài khoản, chuyển chủ sở hữu và sửa/xóa khảo sát, xem/xóa phản hồi cùng nội dung câu trả lời. Để tránh tự cấp quyền, trạng thái `is_admin` chỉ được thay đổi trực tiếp trong database.
 
-Quyền nghiên cứu được kiểm tra ở server: Owner quản lý thành viên; Researcher cập nhật nghiên cứu, liên kết khảo sát, ghi chú và đánh giá phản hồi; Reviewer chỉ đọc nghiên cứu, phân tích và phản hồi. Chia sẻ khảo sát không trao quyền chỉnh sửa/xóa khảo sát. Xóa tài khoản sở hữu nghiên cứu bị chặn để tránh mất quyền sở hữu/dữ liệu.
+Quyền nghiên cứu được kiểm tra ở server: Owner quản lý thành viên; Researcher cập nhật nghiên cứu, liên kết khảo sát, ghi chú và đánh giá phản hồi; Reviewer chỉ đọc nghiên cứu, phân tích và phản hồi. Quyền sửa khảo sát của tài khoản khác được điều khiển riêng bằng công tắc tạm thời trong cài đặt admin; quyền đó không cấp quyền chỉnh sửa nghiên cứu hoặc xóa khảo sát. Xóa tài khoản sở hữu nghiên cứu bị chặn để tránh mất quyền sở hữu/dữ liệu.
 
 Participant code được tạo ngẫu nhiên theo từng nghiên cứu; trạng thái chỉ được researcher cập nhật thủ công. brainst0rm không lưu tên/email, không liên kết participant code với câu trả lời, và code vẫn là pseudonymous chứ không bảo đảm anonymous tuyệt đối nếu ghép dữ liệu ngoài hệ thống.
 
@@ -181,7 +181,69 @@ Next.js: giữ nguyên `backend/`, bỏ đoạn `express.static` trong `app.js`,
 - **Tạo từ mẫu**: Tổng quan → "Tạo từ mẫu" tạo bản nháp của chính bạn kèm cấu hình chấm điểm (đang tắt). Bỏ trường định danh (trung tâm, số thứ tự) của HCL-32 để giữ ẩn danh. Đưa mẫu vào hệ thống thật: `node scripts/seed-templates.js --user <username>` (`--list-users` để xem tài khoản).
 - Câu hỏi chọn một lưu **nhãn** của lựa chọn; cấu hình chấm điểm chụp ánh xạ nhãn → giá trị. Đổi tên lựa chọn rồi không lưu lại cấu hình sẽ khiến lần nộp đó không được chấm (an toàn, không chấm sai).
 
-### Mọi người xem khảo sát và nghiên cứu của nhau (chỉ đọc)
+### Mọi người xem khảo sát và nghiên cứu của nhau
 
-- Mọi tài khoản đã đăng nhập xem được khảo sát (danh sách, câu hỏi qua xem trước), nghiên cứu, phản hồi và phân tích của nhau; **không** sửa, xóa, đánh giá, xuất file hay tạo phiên bản dataset. Vai trò mới `viewer` (chỉ đọc) nằm trong danh sách vai trò mặc định của các API đọc; mọi API ghi vẫn truyền danh sách vai trò tường minh.
+- Mọi tài khoản đã đăng nhập xem được khảo sát (danh sách, câu hỏi qua xem trước), nghiên cứu, phản hồi và phân tích của nhau. Công tắc sửa khảo sát dùng chung được mô tả bên dưới; nghiên cứu, phản hồi, review, export và dataset vẫn theo quyền hiện có.
+- Qua vai trò `viewer`, người dùng chỉ đọc các tài nguyên nghiên cứu; các API ghi dựa trên vai trò vẫn yêu cầu quyền tường minh.
 - Tổng quan mặc định hiện "Tất cả" (có nút "Của tôi"). Lưu ý riêng tư: phản hồi của người tham gia cũng hiển thị cho mọi tài khoản.
+
+## Nhiệm vụ và điểm thưởng (giai đoạn 2)
+
+- **Cần chạy** `backend/migrations/009_reward_system.sql` (sau 006 và 008), rồi `node scripts/seed-reward-tasks.js` để nạp 13 nhiệm vụ mẫu **tạm** (đều đánh dấu "Tạm", điểm bằng nhau). Mặc định **tắt**.
+- **Bật cho một khảo sát**: Theo dõi → Chia mức điểm → "Bật nhiệm vụ hằng ngày và điểm thưởng". Cần đã bật chia mức và có kênh hỗ trợ.
+- **Học sinh** (đã lưu kết quả vào hồ sơ theo dõi) vào `#/track/tasks`: thấy nhiệm vụ theo nhóm, ví Sao, thanh trần ngày/tuần và hộp "Bạn cần người đồng hành?". Không phạt, không đếm ngày bỏ lỡ; điểm đã nhận luôn được giữ.
+- **Quy tắc**: một trần chung (mặc định 50/ngày, 250/tuần, chỉnh được); mỗi nhiệm vụ một lần/ngày (khóa duy nhất trong DB, gửi lặp không cộng thêm); vượt trần thì vẫn ghi nhận hoàn thành với 0 điểm; múi giờ Asia/Ho_Chi_Minh; nhóm giữ cố định trong một chu kỳ (mặc định 14 ngày) nên làm lại khảo sát sớm không đổi nhóm.
+- **Xác minh tối thiểu**: tự báo cáo, đếm giờ phía máy chủ, đếm ký tự (không gửi/lưu nội dung), chọn loại hành động (chỉ lưu nhãn lựa chọn).
+- **Quản trị** (`#/admin/rewards`): tên và biểu tượng đơn vị điểm (hiển thị "Sao ⭐", mã nội bộ TVT), trần điểm, chu kỳ, tên gói theo nhóm, thêm/sửa/ẩn nhiệm vụ (không xóa để giữ lịch sử). Mã nhiệm vụ không đổi được sau khi tạo.
+- Reward stages 3B-4 are implemented in code; migration 013 and manual verification for mini-games remain pending. Other pending roadmap items: assent/guardian consent, control group and exports, profile deletion request.
+
+### Chuỗi ngày và Thẻ nghỉ (giai đoạn 3A)
+
+- **Migration**: sau `009_reward_system.sql`, chạy `backend/migrations/010_reward_streaks.sql` trong Supabase SQL Editor. Không tự chạy migration lên database thật.
+- Chuỗi tính theo ngày Việt Nam có ít nhất một nhiệm vụ hoàn thành; hoàn thành 0 Sao do chạm trần vẫn tính. Nếu hôm nay chưa có hoạt động, chuỗi vẫn tính đến hôm qua.
+- Thẻ nghỉ do học sinh chủ động dùng cho hôm nay hoặc hôm qua, tối đa theo cấu hình mỗi tuần (mặc định 2). Thẻ nghỉ không cộng điểm; một ngày chỉ dùng được một thẻ.
+- Trang `#/track/tasks` hiển thị chuỗi hiện tại, chuỗi dài nhất và số thẻ còn lại. Admin có thể bật/tắt tính năng và đặt số thẻ mỗi tuần.
+- Thẻ nghỉ và chuỗi chỉ mang tính khích lệ. Ngày gián đoạn không xóa điểm, vật phẩm hay tiến trình; giao diện không thông báo mất chuỗi.
+- **Chưa kiểm thử** migration 010, API và giao diện trình duyệt.
+
+## Quyền chỉnh sửa khảo sát dùng chung (tạm thời)
+
+- Mặc định, mọi tài khoản đã đăng nhập có thể mở và chỉnh sửa tiêu đề, mô tả, câu hỏi, trạng thái của khảo sát do tài khoản khác tạo. Mọi thao tác sửa được ghi vào nhật ký hoạt động.
+- Tài khoản không sở hữu khảo sát **không thể xóa** khảo sát đó. Quyền đánh giá phản hồi, xuất dữ liệu và đổi cấu hình theo dõi không mở rộng theo cài đặt này.
+- Chạy `backend/migrations/011_shared_survey_editing.sql` để lưu và quản lý cài đặt lâu dài. Admin bật/tắt tại `#/admin/settings`.
+- Khi tắt, khảo sát của tài khoản khác trở về chế độ chỉ xem/xem trước; quyền sở hữu và dữ liệu không đổi.
+
+
+
+## Reward inventory stage 3B
+
+- Migration 012 (`backend/migrations/012_reward_inventory.sql`) was reported applied by the user.
+- Admin manages the catalog at `#/admin/rewards`: create, edit, hide, and show items. New items default to placeholder; the catalog starts empty until approved content is added.
+- Students see the Inventory tab at `#/track/inventory`. Items unlock from cumulative stars; equipping does not spend stars and requires an unlock.
+- APIs: student `GET /api/track/rewards/inventory`, `POST /api/track/rewards/equip`; admin `GET|POST /api/admin/rewards/items`, `PUT /api/admin/rewards/items/:id`.
+- New tables: `reward_items`, `reward_unlocks`, `reward_profile_prefs`. Manual browser verification remains pending.
+
+## Companion pet stage 3C
+
+- No migration is needed. The chosen species is saved in `reward_profile_prefs.equipped.pet`; the backend accepts only `cat`, `bunny`, `fox`, or `bear`. Default species: cat.
+- Student page: `#/track/pet`, also linked from the tracking dashboard and reward tabs. Species names are fixed; students cannot enter free text.
+- `frontend/js/pet.js` draws inline SVG. The companion can show an equipped `pet_item` decoration. Mood copy stays positive or neutral; only a gentle breathing animation runs when reduced motion is not requested.
+- The existing student API `POST /api/track/rewards/equip` stores the companion selection with kind `pet`. No notifications or care schedule are introduced.
+- Browser verification at mobile width and with reduced motion remains pending.
+
+## Student navigation and gentle reminders stage 3D
+
+- No migration is needed. The student navigation links to progress, pet, tasks, and inventory: fixed bottom on mobile with safe-area padding, floating pill on tablet, sticky vertical nav on desktop.
+- `reward_profile_prefs.reminders_enabled` is managed by tracker-only `PUT /api/track/rewards/reminders` with `{enabled:boolean}`. The gentle in-app prompt appears only when opening the progress dashboard and when enabled.
+- Browser notifications are a separate direct opt-in: the student must press the enable button and accept the browser permission. If granted, at most one local notification appears per device-local day when the student opens the app. There is no background schedule, email/SMS, or collected contact information.
+- Browser checks for the three responsive breakpoints, safe-area padding, persisted preference, and notification opt-in remain pending.
+
+
+## Reward mini-games stage 4
+
+- Apply `backend/migrations/013_reward_task_games.sql` manually after migration 012. It adds the allowlisted `reward_tasks.game` column and tags only matching placeholder seed tasks. Future planned migrations shift: assent 014, control group 015.
+- Admin selects a game in the task editor: R-03 breathing circle, Y-01 server-timed rest timer, R-05 three-plan form. All use existing server completion and points.
+- Standard setup: create a research project and link the survey, then open that survey's tracking settings (`#/tracking/<surveyId>`) to enable tracking, score bands, and rewards. After a participant submits the survey, they can consent to create an anonymous profile; if rewards are enabled, the completion screen links to `#/track/tasks`.
+- R-05 text remains in the page only; only a combined character count is sent. Breathing guidance has no breath hold. Reduced-motion preference disables breathing and confetti animation.
+- R-03 has a stop action that clears its server-side timer start; Y-01 continues while the student puts the device down.
+- No random prizes, leaderboard, penalty, or changes to scoring. Migration and browser verification remain pending.

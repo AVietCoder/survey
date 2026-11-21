@@ -21,8 +21,16 @@ export const ACTION_LABELS = {
   'survey.update': 'Sửa khảo sát',
   'survey.publish': 'Xuất bản khảo sát',
   'survey.delete': 'Xóa khảo sát',
+  'survey.vote': 'Bình chọn khảo sát mặc định',
+  'survey.vote_clear': 'Rút phiếu khảo sát mặc định',
+  'settings.shared_survey_editing': 'Đổi quyền sửa khảo sát dùng chung',
   'response.review': 'Đánh giá phản hồi',
   'response.delete': 'Xóa phản hồi',
+  'reward.settings': 'Sửa cấu hình điểm thưởng',
+  'reward.task_create': 'Tạo nhiệm vụ',
+  'reward.task_update': 'Sửa nhiệm vụ',
+  'reward.item_create': 'Tạo vật phẩm thưởng',
+  'reward.item_update': 'Sửa vật phẩm thưởng',
   'export.csv': 'Xuất CSV',
   'export.xlsx': 'Xuất XLSX'
 }

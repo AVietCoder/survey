@@ -3,7 +3,13 @@ import { HttpError } from '../middleware/auth.js'
 import { loadQuestions } from '../services/surveys.js'
 import { evaluate, hashIp } from '../services/quality.js'
 import { tracking } from './tracking.js'
+import { surveyVotes } from './admin.js'
 import { COOKIE_NAME } from '../services/tracking-credentials.js'
+
+/** Khảo sát mặc định của trang chủ (thắng bình chọn của admin). Chỉ trả thông tin công khai tối thiểu. */
+export async function defaultSurvey(_req, res) {
+  res.set('Cache-Control', 'no-store').json({ survey: await surveyVotes.defaultSurvey() })
+}
 
 async function published(slug) {
   const s = ok(await supabase.from('surveys').select('id,user_id,title,description,settings,status').eq('public_slug', slug).maybeSingle())

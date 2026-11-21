@@ -87,7 +87,7 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
       fingerprint: scoring_fingerprint ? scoring_fingerprint.slice(0, 12) : null,
       scoreMeaning: rest.score_meaning, schedule: { ...normalizeSchedule(rest.schedule) },
       consentText: rest.consent_text, consentVersion: rest.consent_version, adultAttestation: rest.adult_attestation,
-      bands: rest.bands?.enabled ? rest.bands : { enabled: false },
+      bands: rest.bands?.enabled ? rest.bands : { enabled: false }, rewardsEnabled: rest.rewards_enabled === true,
       updatedAt: rest.updated_at, warnings: configWarnings(config, questions)
     }
   }
@@ -119,6 +119,10 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
     }
     // Mức điểm: chỉ ghi cột `bands` khi người dùng gửi (để không phụ thuộc migration 008 nếu không dùng tính năng này)
     const bands = body.bands === undefined ? undefined : normalizeBands(body.bands, scoring.snapshot)
+    // Nhiệm vụ & điểm thưởng: chỉ ghi cột khi người dùng gửi (không phụ thuộc migration 009), và cần chia mức + kênh hỗ trợ
+    const rewardsEnabled = body.rewardsEnabled === undefined ? undefined : body.rewardsEnabled === true
+    if (rewardsEnabled === true && !(bands === undefined ? existing?.bands : bands)?.enabled)
+      throw new HttpError(400, 'Cần bật chia mức điểm (kèm kênh hỗ trợ) trước khi bật nhiệm vụ và điểm thưởng')
     if (enabled && consentText.length < 20) throw new HttpError(400, 'Cần nội dung đồng ý rõ ràng (tối thiểu 20 ký tự) trước khi bật theo dõi')
 
     // Mỗi lần nội dung đồng ý (hoặc yêu cầu xác nhận người lớn) đổi → tăng phiên bản; người đã đồng ý bản cũ sẽ được hỏi lại.
@@ -127,7 +131,8 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
       enabled, assessment_key: assessmentKey, assessment_name: assessmentName, scoring, scoring_fingerprint: fingerprint,
       score_meaning: scoreMeaning, schedule, consent_text: consentText, adult_attestation: adultAttestation,
       consent_version: existing ? existing.consent_version + (changed ? 1 : 0) : 1, updated_by: userId,
-      ...(bands === undefined ? {} : { bands: bands || {} })
+      ...(bands === undefined ? {} : { bands: bands || {} }),
+      ...(rewardsEnabled === undefined ? {} : { rewards_enabled: rewardsEnabled })
     }
     const saved = existing
       ? q(await db.from('survey_tracking_configs').update(row).eq('survey_id', survey.id).select('*').single())
@@ -247,7 +252,14 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
       completed_at: response.submitted_at,
       ...(band ? { band: band.index, band_thresholds: { direction: config.bands.direction, cutoffs: config.bands.cutoffs, labels: config.bands.labels } } : {})
     }
-    const inserted = await db.from('tracking_sessions').insert(row).select('id,profile_id,score,score_status').single()
+    const insertRow = r => db.from('tracking_sessions').insert(r).select('id,profile_id,score,score_status').single()
+    let inserted = await insertRow(row)
+    // DB cũ có ràng buộc band hẹp hơn migration 008 (cần chạy 018): mức điểm chỉ để gợi ý, không để nó chặn việc lưu hồ sơ.
+    if (inserted.error?.code === '23514' && /band/.test(inserted.error.message || '')) {
+      console.warn('tracking_sessions_band_check từ chối mức điểm; lưu phiên không kèm mức. Hãy chạy migration 018.')
+      const { band: _band, band_thresholds: _thresholds, ...withoutBand } = row
+      inserted = await insertRow(withoutBand)
+    }
     if (inserted.error?.code === '23505') {          // idempotent: response này đã có session
       const existing = q(await db.from('tracking_sessions').select('id,profile_id,score,score_status').eq('response_id', response.id).maybeSingle())
       if (existing && existing.profile_id === profileId) return { session: existing, created: false }
@@ -305,6 +317,7 @@ export function createTrackingService(db, { clock = () => new Date() } = {}) {
       return {
         enabled: true, assessmentName: config.assessment_name, consentText: config.consent_text, consentVersion: config.consent_version,
         adultAttestation: config.adult_attestation, scoreMeaning: config.score_meaning,
+        rewardsEnabled: config.rewards_enabled === true,
         hasProfile: Boolean(auth), consentOk: auth ? await hasConsent(auth.profileId, survey.user_id, config.assessment_key, hash) : false
       }
     } catch (error) {

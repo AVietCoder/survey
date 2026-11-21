@@ -24,6 +24,8 @@ test('parseClock reads common Vietnamese/English time formats and rejects nonsen
   assert.equal(parseClock('11 pm'), 23 * 60)
   assert.equal(parseClock('12 am'), 0)
   assert.equal(parseClock('06:05'), 6 * 60 + 5)
+  assert.equal(parseClock('3'), 3 * 60); assert.equal(parseClock('22'), 22 * 60); assert.equal(parseClock('0'), 0)   // giờ tròn, đồng hồ 24 giờ
+  for (const bad of ['24', '99'].concat([])) assert.equal(parseClock(bad), null, bad)
   for (const bad of ['', 'abc', '25:00', '24h', '12:60', '13 pm', '0 am', null, undefined]) assert.equal(parseClock(bad), null, String(bad))
 })
 

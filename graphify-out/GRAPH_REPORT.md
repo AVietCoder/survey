@@ -1,124 +1,253 @@
-# Graph Report - lumen-survey-fullstack  (2026-11-17)
+# Graph Report - lumen-survey-fullstack  (2026-11-21)
 
 ## Corpus Check
-- 57 files · ~58,273 words
+- 95 files · ~115,727 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 5 file(s) not represented in the graph (top: .css 3, .example 1, (none) 1)
+- Unclassified: 7 file(s) not represented in the graph (top: .css 4, (none) 2, .example 1)
 
 ## Summary
-- 484 nodes · 1411 edges · 11 communities
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 51 edges (avg confidence: 0.86)
+- 838 nodes · 2279 edges · 35 communities (32 shown, 3 thin omitted)
+- Extraction: 95% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 102 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
+## Graph Freshness
+- Built from commit: `9ef36cf1`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
+
 ## Community Hubs (Navigation)
-- Progress Tracking Service
 - Admin and Survey Controllers
+- tracking-accounts.test.js
+- Progress Tracking Service
 - Frontend SPA (app.js)
-- Activity Log and Test Hooks
-- Backend Dependencies
-- Cozy Purple Design Spec
-- Analytics and Statistics
-- Project Brief and Docs
+- Tiêu Chí Cho Một Website Đẹp — Hướng Dẫn Đầy Đủ
+- Template Seed Script
+- Reward Service
 - Tracking HTTP Controller
-- Seed Data Script
-- Export (CSV/XLSX)
+- package.json
+- App verification approaches (timer, timestamp, character count, self-report)
+- ui.js
+- exports.js
+- rewards.js
+- Project Brief and Docs
+- Reward Design Principles
+- Reward System open decisions document
+- README (none.md)
+- Consent and Progress Docs
+- seed.js
+- UI & UX DESIGN RULES — BỘ LUẬT GIAO DIỆN
+- Analytics Docs
+- ref_node_assert
+- createFakeDb
+- index.js
+- scripts
+- score-bands.test.js
+- Reward System plan
+- tracking-service.test.js
+- village.js
+- Progress Tracking service
+- reward.test.js
+- activity-admin.test.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `HttpError` - 78 edges
-2. `ok()` - 67 edges
-3. `createTrackingService()` - 54 edges
-4. `logActivity()` - 25 edges
-5. `adminView()` - 24 edges
-6. `esc()` - 23 edges
-7. `loadQuestions()` - 18 edges
-8. `researchView()` - 18 edges
-9. `builderRender()` - 18 edges
-10. `getProjectAccess()` - 17 edges
+1. `HttpError` - 122 edges
+2. `ok()` - 87 edges
+3. `createTrackingService()` - 67 edges
+4. `logActivity()` - 36 edges
+5. `createRewardService()` - 31 edges
+6. `esc()` - 29 edges
+7. `adminView()` - 27 edges
+8. `createFakeDb()` - 24 edges
+9. `api()` - 23 edges
+10. `supabase` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `frontend/css/cozy.css` --semantically_similar_to--> `css/cozy.css`  [INFERRED] [semantically similar]
   PROJECT_CONTEXT.md → frontend/index.html
 - `Tracking` --indirect_call--> `context()`  [INFERRED]
   frontend/js/tracking.js → backend/src/controllers/tracking.js
-- `Progress Tracking feature` --semantically_similar_to--> `Progress Tracking (migration 006)`  [INFERRED] [semantically similar]
-  none.md → PROJECT_CONTEXT.md
 - `Typography (Nunito, clamp scale)` --references--> `Nunito Google font`  [INFERRED]
   design-spec-cozy-purple.md → frontend/index.html
-- `revokeCredential()` --calls--> `HttpError`  [EXTRACTED]
-  backend/src/services/tracking.js → backend/src/middleware/auth.js
+- `Sao (TVT) point unit` --conceptually_related_to--> `Tasks and reward points (phase 2)`  [INFERRED]
+  docs/answer.md → none.md
+- `Reward System plan` --references--> `Reward System design decisions (answer.md)`  [EXTRACTED]
+  CLAUDE.md → docs/answer.md
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
 - **Four upgrade modules** — project_context_research_management [EXTRACTED 0.95]
+- **Task verification mechanisms across Y/R tasks** — solution_verification_approaches, solution_y_01_power_nap, solution_r_03_physiological_sigh, solution_r_05_brain_dump_note, solution_y_05_anchor_wake_up [EXTRACTED 0.95]
 - **Frontend shell loads CSS and JS layers** — frontend_index_style_css, frontend_index_cozy_css, frontend_index_tracking_css, frontend_js_app [EXTRACTED 1.00]
 - **Research data integrity features** — project_context_researcher_review, project_context_export, project_context_dataset_versioning [INFERRED 0.75]
+- **Reward safety and ethics principles** — docs_answer_kenh_ho_tro, docs_answer_cau_hoi_tu_lam_hai, docs_answer_dong_y_duoi_18, docs_answer_ten_goi_than_thien [INFERRED 0.75]
+- **Reward system decisions to plan to docs** — docs_answer, claude_reward_system, none_nhiem_vu_diem_thuong [INFERRED 0.85]
+- **Reward system planning and design documents** — docs_reward_system_open_decisions, docs_reward_system_open_decisions_html_page, solution [INFERRED 0.85]
 
-## Communities (11 total, 0 thin omitted)
+## Communities (35 total, 3 thin omitted)
 
-### Community 0 - "Progress Tracking Service"
+### Community 0 - "Admin and Survey Controllers"
+Cohesion: 0.05
+Nodes (121): ok(), supabase, activity(), cleanPassword(), cleanUsername(), createSurvey(), createUser(), getSurvey() (+113 more)
+
+### Community 1 - "tracking-accounts.test.js"
+Cohesion: 0.16
+Nodes (11): useSurveyVotes(), TRACKING_CONSTRAINTS, make(), survey(), UNIQUE, db(), notFound(), survey (+3 more)
+
+### Community 2 - "Progress Tracking Service"
+Cohesion: 0.05
+Nodes (91): consentHash(), createTrackingService(), assessmentDetail(), attachForSubmit(), attachSession(), authenticate(), bandForSubmit(), configWarnings() (+83 more)
+
+### Community 3 - "Frontend SPA (app.js)"
+Cohesion: 0.09
+Nodes (82): ACTIVITY_GROUPS, addQuestion(), adminActivityView(), adminPager(), adminQualityLabel, adminQuestion(), adminRewardsView(), adminSharedEditingView() (+74 more)
+
+### Community 4 - "Tiêu Chí Cho Một Website Đẹp — Hướng Dẫn Đầy Đủ"
+Cohesion: 0.09
+Nodes (22): 10. Checklist đánh giá nhanh, 11. Công cụ kiểm tra gợi ý, 1. Mở đầu, 2.1. Bố cục (Layout), 2.2. Màu sắc (Color), 2.3. Typography (Chữ), 2.4. Hình ảnh & đa phương tiện, 2.5. Icon & minh họa (+14 more)
+
+### Community 5 - "Template Seed Script"
 Cohesion: 0.07
-Nodes (70): consentHash(), createTrackingService(), assessmentDetail(), attachForSubmit(), attachSession(), authenticate(), configWarnings(), createRecoveryLink() (+62 more)
+Nodes (27): dotenv@^16.4.5, args, dry, project, survey, tracking, user, existing (+19 more)
 
-### Community 1 - "Admin and Survey Controllers"
-Cohesion: 0.10
-Nodes (66): ok(), supabase, cleanPassword(), cleanUsername(), createSurvey(), createUser(), getSurvey(), listResponses() (+58 more)
+### Community 6 - "Reward Service"
+Cohesion: 0.09
+Nodes (51): asDate(), clock(), COMPLETION_TYPES, computeStreak(), createRewardService(), cancelStart(), complete(), createItem() (+43 more)
 
-### Community 2 - "Frontend SPA (app.js)"
-Cohesion: 0.11
-Nodes (66): ACTIVITY_GROUPS, addQuestion(), adminActivityView(), adminPager(), adminQualityLabel, adminQuestion(), adminTabs(), adminTypes (+58 more)
-
-### Community 3 - "Activity Log and Test Hooks"
+### Community 7 - "Tracking HTTP Controller"
 Cohesion: 0.08
-Nodes (30): useSupabaseForTests(), useTrackingService(), errorHandler(), cleanMetadata(), canonicalize(), DATASET_CHECKSUM_ALGORITHM, DATASET_DEFINITION, fingerprintDataset() (+22 more)
+Nodes (42): accountLogin(), accounts, assessment(), canEditConfig(), changeAccountPassword(), clearTrackingCookie(), context(), cookieOptions() (+34 more)
 
-### Community 4 - "Backend Dependencies"
-Cohesion: 0.06
-Nodes (39): dependencies, bcrypt@^6.0.0, cookie-parser@^1.4.6, cors@^2.8.5, dotenv@^16.4.5, express@^4.19.2, express-rate-limit@^7.4.0, jsonwebtoken@^9.0.2 (+31 more)
+### Community 8 - "package.json"
+Cohesion: 0.13
+Nodes (19): dependencies, bcrypt@^6.0.0, cookie-parser@^1.4.6, cors@^2.8.5, express-rate-limit@^7.4.0, jsonwebtoken@^9.0.2, @supabase/supabase-js@^2.45.0, name (+11 more)
 
-### Community 5 - "Cozy Purple Design Spec"
-Cohesion: 0.10
+### Community 9 - "App verification approaches (timer, timestamp, character count, self-report)"
+Cohesion: 0.13
+Nodes (24): Task catalog and self-report verification (Q1-Q3), Pittsburgh Sleep Quality Index (PSQI) questionnaire, PSQI bed partner items (Q10), PSQI sleep disturbance frequency items (Q5), PSQI sleep habit items (bedtime, latency, wake time, sleep duration), PSQI subjective quality, sleep medication and daytime dysfunction items (Q6-Q9), solution.md: yellow and red group task solutions, R-01 Tactical Offload (+30 TVT reverse reward) (+16 more)
+
+### Community 10 - "ui.js"
+Cohesion: 0.09
 Nodes (33): Accessibility rules, Components (card, button, form, sheet, toast), Design tokens (purple scale, amber, coral, green), Motion and reduced-motion, Page templates (Home, Landing), Reference self-care pet app image, Responsive layout (tab bar, pill, sidebar), Starter CSS block (+25 more)
 
-### Community 6 - "Analytics and Statistics"
-Cohesion: 0.16
-Nodes (27): activity(), bars(), bySurvey(), calculateCompletionRate(), calculateCorrelation(), calculateCronbachAlpha(), describeNumeric(), fetchAll() (+19 more)
-
-### Community 7 - "Project Brief and Docs"
-Cohesion: 0.07
-Nodes (29): final.md (Lumen completion brief), Completion Criteria, Four Modules (Quality, Analytics, Research, Export), UI/UX Requirements (empty states, controls, tables), Admin activity logs (migration 007), Admin privilege granting via SQL, REST API endpoints, Dataset versions HMAC (+21 more)
-
-### Community 8 - "Tracking HTTP Controller"
-Cohesion: 0.13
-Nodes (25): assessment(), canEditConfig(), clearTrackingCookie(), context(), cookieOptions(), credentials(), deleteProfile(), enroll() (+17 more)
-
-### Community 9 - "Seed Data Script"
-Cohesion: 0.14
-Nodes (17): old, survey, texts, user, getBySlug(), published(), start(), submit() (+9 more)
-
-### Community 10 - "Export (CSV/XLSX)"
+### Community 11 - "exports.js"
 Cohesion: 0.23
 Nodes (13): exceljs@^4.4.0, safeFilename(), sendExport(), surveyCsv(), surveyXlsx(), answerToText(), createCsv(), createCsvFile() (+5 more)
 
+### Community 12 - "rewards.js"
+Cohesion: 0.17
+Nodes (14): adminCreateItem(), adminCreateTask(), adminSaveSettings(), cancelStart(), complete(), equip(), inventory(), noStore() (+6 more)
+
+### Community 13 - "Project Brief and Docs"
+Cohesion: 0.18
+Nodes (10): Four Modules (Quality, Analytics, Research, Export), Admin area, brainst0rm Survey Platform, Consent workflow (planned), Dataset versioning (migration 005), SQL migrations 001-006, Progress Tracking (migration 006), Research Management (migration 004) (+2 more)
+
+### Community 14 - "Reward Design Principles"
+Cohesion: 0.22
+Nodes (11): Reward System design decisions (answer.md), Self-harm questions restriction, Data-driven task catalog, Support area 'Ban can nguoi dong hanh?', Data retention and deletion, Researcher-configured thresholds, Gentle reminders, no punishment, Control group support (+3 more)
+
+### Community 15 - "Reward System open decisions document"
+Cohesion: 0.18
+Nodes (10): 14-day reassessment cycle, Reward System open decisions document, Already decided reward system choices, Reward System open decisions interactive HTML form, Copy answers / print to PDF actions, Operations and data: reminders, timezone, retention, real rewards (Q15-Q18), Study design: control group and reassessment interval (Q13-Q14), Three-band green/yellow/red thresholds and labels (Q7-Q8) (+2 more)
+
+### Community 16 - "README (none.md)"
+Cohesion: 0.20
+Nodes (12): Architecture (single Express process, Supabase), Activity log (migration 007), Read/write access roles (viewer read-only), README: brainst0rm Survey Platform (none.md), Admin area and activity log, REST API reference, Response quality scoring and review, Setup and run (+4 more)
+
+### Community 18 - "Consent and Progress Docs"
+Cohesion: 0.20
+Nodes (9): Assent and guardian consent, Minor assent and consent, final.md (Lumen completion brief), Completion Criteria, UI/UX Requirements (empty states, controls, tables), Consent workflow (pending), Pending migrations 006-009 on real DB, Psychology analytics (+1 more)
+
+### Community 19 - "seed.js"
+Cohesion: 0.18
+Nodes (10): old, survey, texts, user, evaluate(), findInconsistentAnswers(), normalize(), SCALE (+2 more)
+
+### Community 20 - "UI & UX DESIGN RULES — BỘ LUẬT GIAO DIỆN"
+Cohesion: 0.20
+Nodes (9): 1. Visual Design, 2. Layout & Structure, 3. Color & Typography, 4. Components, 5. User Experience, 6. Animation & Effects, 7. Responsive & Accessibility, 8. Quality Standards (+1 more)
+
+### Community 21 - "Analytics Docs"
+Cohesion: 0.67
+Nodes (3): Psychology analytics (alpha, crosstab, Pearson), CSV/XLSX export and PDF report, Researcher review and quality checks
+
+### Community 23 - "ref_node_assert"
+Cohesion: 0.32
+Nodes (5): canonicalize(), DATASET_CHECKSUM_ALGORITHM, DATASET_DEFINITION, fingerprintDataset(), VARIABLE_COLUMNS
+
+### Community 24 - "createFakeDb"
+Cohesion: 0.27
+Nodes (12): useSupabaseForTests(), useTrackingService(), errorHandler(), boot(), createFakeDb(), bootDb(), boot(), bootHttp() (+4 more)
+
+### Community 25 - "index.js"
+Cohesion: 0.11
+Nodes (14): express@^4.19.2, app, web, a, ad, p, r, rp (+6 more)
+
+### Community 26 - "scripts"
+Cohesion: 0.40
+Nodes (5): scripts, dev, seed, start, test
+
+### Community 27 - "score-bands.test.js"
+Cohesion: 0.25
+Nodes (7): MIN_GROUP_SIZE, BAND_TONES, call(), Q, SNAP, submitWith(), valid()
+
+### Community 28 - "Reward System plan"
+Cohesion: 0.22
+Nodes (9): CLAUDE.md (repo guidance), Known pitfalls, Phase 3: pet, streak, Rest Card, Phase 4: task mini-games, Common commands (npm, seed, test), Reward invariant principles, Reward System plan, Timezone and streak with Rest Card (+1 more)
+
+### Community 29 - "tracking-service.test.js"
+Cohesion: 0.28
+Nodes (7): addResponse(), consent, enrollFirst(), questions, secondSession(), setup(), surveyRow
+
+### Community 30 - "village.js"
+Cohesion: 0.22
+Nodes (12): avatarSvg(), cleanAvatar(), companion(), companionBody(), disc(), ground(), hero(), heroBody() (+4 more)
+
+### Community 31 - "Progress Tracking service"
+Cohesion: 0.25
+Nodes (9): Score bands (migration 008), Phase 2: task catalog, ledger, caps, Survey templates PSQI / HCL-32, Progress Tracking service, Sao (TVT) point unit, Shared daily/weekly point cap, Score bands 2-6 levels, Tasks and reward points (phase 2) (+1 more)
+
+### Community 32 - "reward.test.js"
+Cohesion: 0.32
+Nodes (6): useRewardService(), AVATAR_LIMITS, boot(), CONSTRAINTS, session(), thresholds()
+
+### Community 33 - "activity-admin.test.js"
+Cohesion: 0.40
+Nodes (3): cleanMetadata(), asAdmin, asUser
+
+## Ambiguous Edges - Review These
+- `HCL-32 32 TRUE/FALSE high-state statements` → `TVT reward points`  [AMBIGUOUS]
+  The London Psychiatry Centre HCL 32.md · relation: conceptually_related_to
+- `R-01 Tactical Offload (+30 TVT reverse reward)` → `App verification approaches (timer, timestamp, character count, self-report)`  [AMBIGUOUS]
+  solution.md · relation: conceptually_related_to
+- `Y-03 Screen Dimming (+20 TVT)` → `App verification approaches (timer, timestamp, character count, self-report)`  [AMBIGUOUS]
+  solution.md · relation: conceptually_related_to
+- `Y-04 Peak Block Lock (+15 TVT)` → `App verification approaches (timer, timestamp, character count, self-report)`  [AMBIGUOUS]
+  solution.md · relation: conceptually_related_to
+
 ## Knowledge Gaps
-- **20 isolated node(s):** `UI/UX Requirements (empty states, controls, tables)`, `Completion Criteria`, `Psychology analytics (alpha, crosstab, Pearson)`, `Admin area`, `Tech stack (vanilla JS, Express, Supabase)` (+15 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 105 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **46 isolated node(s):** `css/style.css`, `css/tracking.css`, `Accessibility rules`, `Motion and reduced-motion`, `Page templates (Home, Landing)` (+41 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 241 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Tracking` connect `Tracking HTTP Controller` to `Frontend SPA (app.js)`?**
-  _High betweenness centrality (0.404) - this node is a cross-community bridge._
-- **Are the 20 inferred relationships involving `createTrackingService()` (e.g. with `assessmentDetail()` and `attachForSubmit()`) actually correct?**
-  _`createTrackingService()` has 20 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `UI/UX Requirements (empty states, controls, tables)`, `Completion Criteria`, `Psychology analytics (alpha, crosstab, Pearson)` to the rest of the system?**
-  _20 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Progress Tracking Service` be split into smaller, more focused modules?**
-  _Cohesion score 0.06677215189873417 - nodes in this community are weakly interconnected._
-- **Why does `frontend/index.html app shell` connect `Cozy Purple Design Spec` to `Tracking HTTP Controller`, `Frontend SPA (app.js)`?**
-  _High betweenness centrality (0.245) - this node is a cross-community bridge._
+- **Why does `context()` connect `Tracking HTTP Controller` to `ui.js`?**
+  _High betweenness centrality (0.191) - this node is a cross-community bridge._
+- **Are the 21 inferred relationships involving `createTrackingService()` (e.g. with `assessmentDetail()` and `attachForSubmit()`) actually correct?**
+  _`createTrackingService()` has 21 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `css/style.css`, `css/tracking.css`, `Accessibility rules` to the rest of the system?**
+  _46 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Admin and Survey Controllers` be split into smaller, more focused modules?**
-  _Cohesion score 0.09543859649122807 - nodes in this community are weakly interconnected._
-- **Should `Frontend SPA (app.js)` be split into smaller, more focused modules?**
-  _Cohesion score 0.10719131614654002 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05104385176306064 - nodes in this community are weakly interconnected._
+- **Why does `Tracking` connect `ui.js` to `Frontend SPA (app.js)`, `Tracking HTTP Controller`?**
+  _High betweenness centrality (0.189) - this node is a cross-community bridge._
+
+### Low-confidence Hints
+_AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
+
+- **What is the exact relationship between `HCL-32 32 TRUE/FALSE high-state statements` and `TVT reward points`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
+- **What is the exact relationship between `R-01 Tactical Offload (+30 TVT reverse reward)` and `App verification approaches (timer, timestamp, character count, self-report)`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._

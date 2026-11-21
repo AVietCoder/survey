@@ -12,6 +12,7 @@ const text = value => (value === null || value === undefined ? '' : String(value
 /** "23:30", "23h30", "23h", "11:30 pm", "6 giờ 30" → số phút trong ngày (0–1439) hoặc null. */
 export function parseClock(value) {
   const raw = text(value).toLowerCase().replace(/\s+/g, ' ')
+  if (/^\d{1,2}$/.test(raw)) return Number(raw) <= 23 ? Number(raw) * 60 : null      // "3" → 03:00, "22" → 22:00 (đồng hồ 24 giờ)
   const match = raw.match(/^(\d{1,2})\s*(?:[:h]|g(?:iờ)?|giờ)\s*(\d{1,2})?\s*(am|pm|sáng|chiều|tối)?$/u) || raw.match(/^(\d{1,2})\s*(am|pm)$/u)
   if (!match) return null
   let hour = Number(match[1])

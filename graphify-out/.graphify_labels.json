@@ -1,1 +1,13 @@
-{"0": "Progress Tracking Service", "1": "Admin and Survey Controllers", "2": "Frontend SPA (app.js)", "3": "Activity Log and Test Hooks", "4": "Backend Dependencies", "5": "Cozy Purple Design Spec", "6": "Analytics and Statistics", "7": "Project Brief and Docs", "8": "Tracking HTTP Controller", "9": "Seed Data Script", "10": "Export (CSV/XLSX)"}
+{
+  "0": "Admin and Survey Controllers",
+  "2": "Progress Tracking Service",
+  "3": "Frontend SPA (app.js)",
+  "5": "Template Seed Script",
+  "6": "Reward Service",
+  "7": "Tracking HTTP Controller",
+  "13": "Project Brief and Docs",
+  "14": "Reward Design Principles",
+  "16": "README (none.md)",
+  "18": "Consent and Progress Docs",
+  "21": "Analytics Docs"
+}

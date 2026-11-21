@@ -18,9 +18,9 @@ const freq = (key, text, required = true) => single(key, text, FREQUENCY, { requ
 const text = (key, textLabel, { required = true, placeholder = '' } = {}) => ({ question_type: 'text', question_text: textLabel, is_required: required, options: [], settings: { key, ...(placeholder ? { placeholder } : {}) } })
 
 const PSQI_QUESTIONS = [
-  text('psqi_bedtime', '1. Trong tháng vừa qua, bạn thường đi ngủ vào mấy giờ? (ví dụ 23:30)', { placeholder: '23:30' }),
+  text('psqi_bedtime', '1. Trong tháng vừa qua, bạn thường đi ngủ vào mấy giờ? (ghi dạng giờ:phút theo đồng hồ 24 giờ, ví dụ 23:30)', { placeholder: '23:30' }),
   text('psqi_latency_min', '2. Trong tháng vừa qua, thời gian trung bình để bạn rơi vào giấc ngủ là bao lâu? (tính bằng phút, ví dụ 20)', { placeholder: '20' }),
-  text('psqi_waketime', '3. Trong tháng vừa qua, bạn thường thức dậy lúc mấy giờ vào buổi sáng? (ví dụ 06:30)', { placeholder: '06:30' }),
+  text('psqi_waketime', '3. Trong tháng vừa qua, bạn thường thức dậy lúc mấy giờ vào buổi sáng? (ghi dạng giờ:phút theo đồng hồ 24 giờ, ví dụ 06:30)', { placeholder: '06:30' }),
   text('psqi_sleep_hours', '4. Trong tháng vừa qua, tổng số giờ bạn đã ngủ mỗi đêm là bao nhiêu? (không nhất thiết bằng thời gian nằm trên giường, ví dụ 6.5)', { placeholder: '6.5' }),
   freq('psqi_5a', '5a. Trong tháng vừa qua, tần suất bạn gặp khó khăn khi ngủ: Không thể ngủ trong 30 phút'),
   freq('psqi_5b', '5b. Trong tháng vừa qua, tần suất bạn gặp khó khăn khi ngủ: Tỉnh giấc nửa đêm hoặc sáng sớm'),

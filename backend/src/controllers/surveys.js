@@ -2,6 +2,7 @@ import { supabase, ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
 import { logActivity } from '../services/activity.js'
 import { getOwned, withQuestions, saveQuestions, newSlug } from '../services/surveys.js'
+import { getSharedSurveyEditing } from '../services/shared-editing.js'
 
 const STATUSES = ['draft', 'published', 'archived']
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -11,6 +12,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  */
 export async function list(req, res) {
   const all = req.query.scope === 'all'
+  const sharedEditing = all ? await getSharedSurveyEditing() : null
   let query = supabase.from('surveys').select('id,user_id,title,description,status,public_slug,created_at,updated_at').order('updated_at', { ascending: false })
   if (!all) query = query.eq('user_id', req.user.id)
   const surveys = ok(await query.limit(500))
@@ -23,8 +25,10 @@ export async function list(req, res) {
   res.json({ surveys: surveys.map(s => {
     const a = agg[s.id] || { total: 0, done: 0 }
     const { user_id, ...rest } = s
-    return { ...rest, response_count: a.done, completion_rate: a.total ? Math.round(a.done / a.total * 100) : 0, ...(all ? { owner: ownerNames[user_id] || 'Không rõ', mine: user_id === req.user.id } : {}) }
-  }) })
+    const mine = user_id === req.user.id
+    return { ...rest, response_count: a.done, completion_rate: a.total ? Math.round(a.done / a.total * 100) : 0,
+      ...(all ? { owner: ownerNames[user_id] || 'Không rõ', mine, can_edit: mine || sharedEditing.enabled, can_delete: mine } : {}) }
+  }), ...(all ? { shared_editing_enabled: sharedEditing.enabled } : {}) })
 }
 
 export async function create(req, res) {
@@ -41,19 +45,28 @@ export async function create(req, res) {
 /** Chủ sở hữu nhận bản chỉnh sửa được; tài khoản khác nhận bản CHỈ ĐỌC (readOnly) để xem cấu trúc khảo sát. */
 export async function get(req, res) {
   try {
-    res.json({ survey: await withQuestions(await getOwned(req.params.id, req.user.id)) })
+    res.json({ survey: await withQuestions(await getOwned(req.params.id, req.user.id)), readOnly: false, canDelete: true })
   } catch (error) {
     if (error.status !== 404 || !UUID_RE.test(req.params.id)) throw error
     const survey = ok(await supabase.from('surveys').select('*').eq('id', req.params.id).maybeSingle())
     if (!survey) throw error
     const owner = ok(await supabase.from('users').select('username').eq('id', survey.user_id).maybeSingle())
+    const sharedEditing = await getSharedSurveyEditing()
     const { user_id, ...rest } = survey
-    res.json({ survey: { ...(await withQuestions(rest)), owner: owner?.username || 'Không rõ' }, readOnly: true })
+    res.json({ survey: { ...(await withQuestions(rest)), owner: owner?.username || 'Không rõ' },
+      readOnly: !sharedEditing.enabled, canDelete: false, sharedEditing: sharedEditing.enabled })
   }
 }
 
 export async function update(req, res) {
-  const cur = await getOwned(req.params.id, req.user.id)
+  const cur = await getOwned(req.params.id, req.user.id).catch(async error => {
+    if (error.status !== 404) throw error
+    const sharedEditing = await getSharedSurveyEditing()
+    if (!sharedEditing.enabled) throw error
+    const survey = ok(await supabase.from('surveys').select('*').eq('id', req.params.id).maybeSingle())
+    if (!survey) throw error
+    return survey
+  })
   const b = req.body, patch = {}
   if (b.title !== undefined) patch.title = String(b.title).trim().slice(0, 200) || 'Khảo sát chưa đặt tên'
   if (b.description !== undefined) patch.description = String(b.description).slice(0, 1000)
@@ -67,7 +80,9 @@ export async function update(req, res) {
   if (patch.status === 'published' && !full.questions.length) throw new HttpError(400, 'Cần ít nhất 1 câu hỏi để xuất bản')
   const survey = Object.keys(patch).length
     ? ok(await supabase.from('surveys').update(patch).eq('id', cur.id).select('*').single()) : cur
-  if (patch.status && patch.status !== cur.status) await logActivity(req, patch.status === 'published' ? 'survey.publish' : 'survey.update', { type: 'survey', id: cur.id, label: survey.title }, { status: patch.status })
+  const fields = [...Object.keys(patch), ...(Array.isArray(b.questions) ? ['questions'] : [])]
+  if (fields.length) await logActivity(req, patch.status === 'published' && patch.status !== cur.status ? 'survey.publish' : 'survey.update',
+    { type: 'survey', id: cur.id, label: survey.title }, { fields, shared: cur.user_id !== req.user.id })
   res.json({ survey: await withQuestions(survey) })
 }
 

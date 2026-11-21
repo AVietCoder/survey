@@ -3,11 +3,15 @@ import { HttpError } from '../middleware/auth.js'
 import { getSurveyAccess, UUID } from '../services/research-projects.js'
 import { loadQuestions } from '../services/surveys.js'
 import { createTrackingService } from '../services/tracking.js'
+import { createTrackingAccountService } from '../services/tracking-accounts.js'
 import { COOKIE_NAME, TTL, deviceLabel } from '../services/tracking-credentials.js'
 
 export let tracking = createTrackingService(supabase)
+// mintCredential đi qua `tracking` hiện hành để test thay service vẫn dùng chung DB giả
+const makeAccounts = db => createTrackingAccountService(db, { mintCredential: (...args) => tracking.mintCredential(...args) })
+export let accounts = makeAccounts(supabase)
 /** Chỉ dùng trong test: thay service bằng bản chạy trên DB giả. */
-export function useTrackingService(service) { tracking = service }
+export function useTrackingService(service, db) { tracking = service; if (db) accounts = makeAccounts(db) }
 
 const cookieOptions = () => ({
   httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: TTL.cookie
@@ -57,6 +61,41 @@ export async function recover(req, res) {
   noStore(res)
   const result = await tracking.recover(req.body?.credential, label(req))
   setTrackingCookie(res, result.cookieToken)
+  res.json({ ok: true })
+}
+
+/**
+ * Cổng vào game: chỉ hồ sơ có TÀI KHOẢN HỌC SINH mới được dùng nhiệm vụ/điểm/làng nhỏ.
+ * Người chỉ có mã định danh/cookie vẫn làm khảo sát và xem tiến triển, nhưng không vào được game.
+ * Đặt SAU requireTracker; không dùng cho /me, /assessments, /credentials, /account*, /signout, /profile.
+ */
+export async function requireStudentAccount(req, res, next) {
+  try {
+    const { available, account } = await accounts.getAccount(req.tracker.profileId)
+    if (!available) throw new HttpError(503, 'Chạy backend/migrations/019_tracking_accounts.sql để bật tài khoản học sinh (cần để vào game)')
+    if (!account) return res.status(403).json({ error: 'Game chỉ dành cho học sinh có tài khoản. Hãy tạo tên đăng nhập và mật khẩu để vào game; bạn vẫn xem được tiến triển như bình thường.', code: 'student_account_required' })
+    next()
+  } catch (error) { next(error) }
+}
+
+/* ---------- tài khoản học sinh (migration 019) ---------- */
+export async function accountLogin(req, res) {
+  noStore(res)
+  const result = await accounts.login({ username: req.body?.username, password: req.body?.password }, label(req))
+  setTrackingCookie(res, result.cookieToken)
+  res.json({ ok: true })
+}
+export async function getAccount(req, res) {
+  noStore(res)
+  res.json(await accounts.getAccount(req.tracker.profileId))
+}
+export async function createAccount(req, res) {
+  noStore(res)
+  res.status(201).json({ account: await accounts.createAccount(req.tracker.profileId, { username: req.body?.username, password: req.body?.password }) })
+}
+export async function changeAccountPassword(req, res) {
+  noStore(res)
+  await accounts.changePassword(req.tracker.profileId, { currentPassword: req.body?.currentPassword, newPassword: req.body?.newPassword })
   res.json({ ok: true })
 }
 
