@@ -170,3 +170,59 @@
 /* Thông báo trong game: hiện ở giữa phía trên, không che panel và thanh hành động */
 body:has(.gw-app) .toast-region{top:16px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);width:min(420px,calc(100% - 24px));align-items:center}
 @media(max-width:640px){body:has(.gw-app) .toast-region{top:auto;bottom:96px}}
+
+/* ---------- chỉnh theo tieu-chi-giao-dien-game.md (2026-11-21) ---------- */
+/* Biểu tượng đồng bộ (SVG nét, thay emoji) + vùng chạm >= 44px */
+.gw-chip{min-height:44px}
+.gw-chip-i{display:inline-grid;place-items:center;color:var(--brand-600)}
+.gw-chip-i .gw-i{width:20px;height:20px}
+.gw-badge{font-size:.75rem}
+.gw-bubble button{width:44px;height:44px;margin:-10px -4px -10px 0}
+.gw-bubble-text{display:grid;gap:8px;justify-items:start;min-width:0}
+.gw-coach-go{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:44px;padding:0 14px;border:0;border-radius:var(--r-pill,999px);background:var(--brand-50);color:var(--brand-700);font:800 .875rem/1.2 var(--font);cursor:pointer;text-align:left}
+.gw-coach-go .gw-i{flex:0 0 auto;width:18px;height:18px}
+.gw-coach-go span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gw-coach-go:hover{background:var(--brand-100)}
+.gw-bubble .gw-coach-go{width:auto;height:auto;margin:0;place-items:initial;color:var(--brand-700)}
+
+/* Trạng thái nút thanh hành động: nhấn, vô hiệu, đang chọn */
+.gw-actions button:active,.gw-round:active{transform:scale(.96)}
+.gw-actions button:disabled,.gw-round:disabled{opacity:.5;cursor:not-allowed}
+.gw-actions button[aria-pressed=true]{background:var(--brand-100)}
+
+/* Nền đất của công trình kế tiếp: viền đứt nhẹ để biết đang hướng tới đâu (không phải cảnh báo) */
+.gw-world .vl-next{filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 2px rgba(255,211,110,.95))}
+
+/* Sổ làng: bộ sưu tập có tiến độ */
+.gw-collect{margin:4px 0 14px}
+.gw-collect>b{font-size:.95rem}
+.gw-collect .gw-xp-lg{margin:8px 0 0}
+.gw-codex-row{align-items:center;padding:10px 14px}
+.gw-codex-main{display:grid;gap:2px;min-width:0;color:var(--text);font-weight:inherit;font-size:inherit}
+.gw-codex-main b{font-size:.95rem}
+.gw-codex-main small{color:var(--text-muted);font-size:.8125rem;line-height:1.35;font-weight:600}
+.gw-codex-row .gw-codex-main{color:var(--text)}
+.gw-codex-state{flex:0 0 auto;font-size:.8125rem}
+.gw-codex-row.is-next{border-style:solid;border-color:var(--amber-400,#f5b83d);background:#fff9e8}
+.gw-codex-row.is-next .gw-codex-state{color:#8a5a00}
+
+@media(prefers-reduced-motion:no-preference){
+ .gw-world .vl-next{animation:gw-next 2.4s ease-in-out infinite}
+ @keyframes gw-next{50%{filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px rgba(255,211,110,1))}}
+ .gw-coach-go{transition:background-color .15s ease-out,transform .15s ease-out}
+}
+.gw-bubble .gw-coach-go{background:var(--brand-50);padding:0 14px;min-height:44px;border-radius:999px}
+.gw-bubble .gw-coach-go:hover{background:var(--brand-100)}
+@media(min-width:1101px){
+  .gw-bubble{left:252px;transform:none;max-width:min(440px,calc(100% - 520px))}
+  .gw-bubble::after{left:28px;top:-8px;bottom:auto}
+}
+.gw-bubble .gw-coach-go{display:inline-flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px}
+@media(max-width:640px){.gw-round{width:44px;height:44px}.gw-sys{gap:6px}}
+.gw-bubble-text{width:100%;justify-items:stretch}
+.gw-bubble .gw-coach-go{max-width:100%;min-width:0}
+@media(max-width:640px){
+  .gw-tracker{top:144px}
+  .gw-bubble{top:144px}
+}
+@media(max-width:640px){.gw-coach-name{display:none}}

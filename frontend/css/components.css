@@ -1,0 +1,118 @@
+/* brainst0rm components layer (nạp sau cozy.css, trước tracking.css).
+   Gom các quy tắc dùng chung cho Button/Card/Field/Skip link; không đổi bảng màu hay phông của Cozy Purple. */
+
+/* --- Vòng focus: một token thay cho các chuỗi `.card .btn:focus-visible, .panel .btn:focus-visible…` ---
+   Bề mặt sáng dùng tím đậm, nền tối/tím (mặc định) dùng hổ phách; focus luôn nhìn thấy (WCAG 2.4.7). */
+.card,.panel,.confirm-dialog,.stage,.auth-main,.report-document,.lib,.q,.empty-state,.error-state,.admin-table-wrap,.ui-select-menu{--focus-ring:var(--brand-500)}
+.btn:focus-visible,.ui-select-trigger:focus-visible,.toast-dismiss:focus-visible,.skip-link:focus-visible{outline:3px solid var(--focus-ring,var(--amber-300));outline-offset:3px}
+
+/* --- Button: phản hồi hover (trước đây hover trả về đúng style gốc nên không có phản hồi) --- */
+@media(hover:hover){
+ .btn:not(:disabled):not([aria-disabled=true]):hover{filter:brightness(.97);box-shadow:0 4px 0 0 var(--btn-edge),0 8px 18px -10px rgba(60,51,148,.45)}
+ .btn.pri:not(:disabled):hover{filter:brightness(1.06)}
+ .btn.outline:not(:disabled):hover{filter:none}
+}
+@media(prefers-reduced-motion:no-preference){
+ .btn:not(:disabled):not([aria-disabled=true]):hover{transform:translateY(-1px)}
+ .btn:not(:disabled):not([aria-disabled=true]):active{transform:translateY(3px)}
+}
+.btn-sm{min-height:44px;padding:0 1rem;font-size:.9375rem}   /* nhỏ nhưng vẫn đủ vùng chạm 44px */
+.btn-block{display:flex;width:100%}
+.btn>span{min-width:0}
+
+/* --- Card: biến thể có tiêu đề, khoảng cách con nhất quán --- */
+.card>h3+*{margin-top:.5rem}
+
+/* --- Field (UIKit.field): nhãn, gợi ý, lỗi nối với control --- */
+.uk-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.uk-label{font:700 .875rem/1.3 var(--font);color:var(--text)}
+.uk-hint{font:500 .8125rem/1.4 var(--font);color:var(--text-muted,var(--text))}
+.uk-error{font:700 .8125rem/1.4 var(--font);color:#B3261E}
+.uk-error::before{content:"⚠ ";}                       /* không chỉ truyền đạt bằng màu */
+.uk-field.has-error .in,.uk-field.has-error .sel,.uk-field.has-error textarea{border-color:#B3261E}
+
+/* --- Skip link: ẩn ngoài màn hình, hiện khi nhận focus bàn phím --- */
+.skip-link{position:fixed;left:12px;top:-64px;z-index:1000;display:inline-flex;align-items:center;min-height:44px;padding:0 1.25rem;border-radius:var(--r-md);
+ background:#fff;color:var(--brand-700);font:800 1rem/1 var(--font);text-decoration:none;box-shadow:0 0 0 2px var(--brand-500),var(--shadow-soft)}
+.skip-link:focus,.skip-link:focus-visible{top:12px}
+@media(prefers-reduced-motion:no-preference){.skip-link{transition:top .15s ease-out}}
+[tabindex="-1"]:focus{outline:none}                    /* đích nhảy tới bằng JS, không cần vòng focus */
+
+/* --- Trang không tìm thấy --- */
+.not-found{max-width:36rem;margin:12vh auto;text-align:center}
+.not-found .error-actions{justify-content:center}
+
+/* --- Vùng chạm tối thiểu 44×44px (tiêu chí §5, WCAG 2.5.8) cho điều khiển nhỏ trong bảng, tab, thanh công cụ --- */
+.seg button,.tabs button,.admin-tabs a,.admin-top-link,.admin-breadcrumb a,.linkbox button,.srow-count a,
+.admin-table th button,.credit a,.tk-top .logo,.nav a,
+.notice-actions .btn,.empty-state-actions .btn,.admin-row-actions .btn,.admin-section-head .btn,td>.btn,.admin-form .btn{min-height:44px}
+.credit a,.admin-breadcrumb a,.srow-count a,.tk-top .logo{display:inline-flex;align-items:center}
+.credit a{padding:0 6px}
+#survey-search{min-height:44px}
+.admin-shell .admin-tabs a,.admin-shell .admin-breadcrumb a,.admin-shell .admin-top-link,.admin-shell .who a,.admin-shell .admin-nav-group .nav a{min-height:44px}
+
+/* Chữ phụ tối thiểu 12px (trước là 11px ở chip, chú thích, tiêu đề bảng, breadcrumb) */
+.chip,.row small,.q .tag,.linkbox button,.tbl th,.admin-id,.admin-breadcrumb,.admin-shell .admin-stat small,.side .who{font-size:.75rem}
+.admin-shell li>div>a:not([class]){display:inline-flex;align-items:center;min-height:44px}
+
+/* ======================================================================
+   Chỉnh giao diện sau khi xem ảnh thật (2026-11-21)
+   ====================================================================== */
+
+/* Menu bên: giữ cỡ chữ gốc 16px (quy tắc 12px trước đó đã vô tình thu nhỏ nhãn). Chỉ thanh tab mobile dùng 12px, đã có sẵn trong cozy.css. */
+@media(min-width:1024px){.app:not(.admin-shell) .side .nav a,.admin-shell .side .nav a{font-size:1rem}}
+
+/* Nội dung chính căn giữa trong vùng còn lại, không dính trái trên màn hình rộng (1920/2560px) */
+@media(min-width:1024px){
+ main.workspace-main{margin-inline:auto;width:100%;padding-right:clamp(24px,3vw,44px)}
+}
+
+/* Trang chủ khảo sát: .sv nav a (style.css) đang ép padding 5px 0 nên hai nút sát chữ */
+.sv .home-links{gap:10px}
+.sv .home-links a{padding:0 18px;min-height:44px;font-size:.9375rem;font-weight:800;border-radius:var(--r-pill);background:rgba(255,255,255,.16)}
+.sv .home-links a:hover{background:rgba(255,255,255,.26);color:#fff}
+.sv nav{align-items:center;gap:12px}
+@media(max-width:480px){.sv .home-links a{padding:0 14px;font-size:.875rem}}
+
+/* Đầu trang tổng quan: tiêu đề chiếm chỗ, hai nút đi liền nhau bên phải (trước bị dãn ra giữa) */
+.head>div:first-child{flex:1 1 360px;min-width:0}
+.head>.btn+.btn{margin-left:0}
+.head{justify-content:flex-start}
+.head>.btn:first-of-type,.head>.head-actions:first-of-type{margin-left:auto}
+@media(max-width:640px){.head>.btn{flex:1 1 100%}.head>.btn:first-of-type{margin-left:0}}
+
+/* Chữ phụ đủ đọc: mô tả dưới tiêu đề thẻ đăng nhập tối thiểu 16px */
+.auth-card .sub{font-size:1rem;line-height:1.5}
+.sv .stage h1{max-width:none}
+.admin-activity li a,.admin-activity li a *{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+
+/* Đăng nhập học sinh: bỏ khoảng trống do thông báo lỗi rỗng, cân chữ, đặt thẻ giữa màn hình */
+.tk-form .err:empty,.auth-card .err:empty{display:none}
+.tk-login p,.tk-login .tk-hint{text-wrap:pretty}
+.tk-login>p:first-of-type{text-wrap:balance}
+.tk-form{gap:8px}
+.tk-main:has(>.tk-login){align-content:center;min-height:calc(100vh - 140px)}
+/* Trang học sinh không có thanh điều hướng (đăng nhập…): bỏ cột chừa chỗ cho menu để thẻ nằm giữa */
+@media(min-width:1024px){.tk:not(:has(.tk-bottom-nav)){grid-template-columns:minmax(0,1fr)}.tk:not(:has(.tk-bottom-nav))>main,.tk:not(:has(.tk-bottom-nav))>footer{grid-column:1}}
+
+/* ---- Nhiệm vụ và lịch (trang cấu hình theo dõi): bảng theo trục ngày ---- */
+.tk-sched{margin-top:20px}
+.tk-sched-wrap{overflow:auto;max-width:100%;margin-top:12px;border:1px solid var(--brand-100);border-radius:var(--r-lg);background:#fff;-webkit-overflow-scrolling:touch}
+.tk-sched-wrap:focus-visible{outline:3px solid var(--brand-500);outline-offset:2px}
+.tk-sched-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:.875rem;color:var(--text)}
+.tk-sched-table th,.tk-sched-table td{padding:8px 10px;border-bottom:1px solid var(--brand-50);text-align:left;vertical-align:middle;background:#fff}
+.tk-sched-table thead th{position:sticky;top:0;z-index:2;background:var(--brand-50);font-size:.75rem;font-weight:800;color:var(--brand-700);white-space:nowrap}
+.tk-sched-name{position:sticky;left:0;z-index:1;min-width:200px;max-width:260px;box-shadow:1px 0 0 var(--brand-100)}
+.tk-sched-table thead .tk-sched-name{z-index:3}
+.tk-sched-name small{display:block;margin-top:2px;color:var(--text-muted);font-weight:500;font-size:.8125rem}
+.tk-week{text-align:center!important;border-left:1px solid var(--brand-100)}
+.tk-dayno,.tk-day{min-width:30px;padding:8px 4px!important;text-align:center!important}
+.tk-dayno{font-weight:700}
+.tk-day.is-on{background:var(--brand-100);color:var(--brand-600)}
+.tk-day.is-on.is-off{background:var(--brand-50);color:var(--text-muted)}
+.tk-sched-table tr.is-hidden td,.tk-sched-table tr.is-hidden th{opacity:.7}
+.tk-sched-actions{display:flex;gap:6px;white-space:nowrap}
+.task-days{border:1px solid var(--brand-100);border-radius:var(--r-lg);padding:12px 14px;margin:0}
+.task-days legend{padding:0 6px;font-weight:800}
+.tk-sched-name{min-width:170px;max-width:220px}
+.tk-sched-table td:not(.tk-day):not(.tk-sched-actions){white-space:nowrap}

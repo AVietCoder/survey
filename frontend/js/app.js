@@ -134,9 +134,9 @@ function shell(r,html){
  const navigation=isAdmin?`<div class="admin-nav-group"><span class="admin-nav-label">Khảo sát</span><nav class="nav">${links.filter(([key])=>key!='admin').map(([key,label,icon])=>`<a href="#/${key}" class="${key==r?'on':''}" ${key==r?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[icon]}</svg><span>${label}</span></a>`).join('')}</nav><span class="admin-nav-label">Quản trị</span><nav class="nav">${adminLinks.map(([key,label])=>`<a href="#/admin${key=='overview'?'':'/'+key}" class="${key===(route[1]||'overview')?'on':''}" ${key===(route[1]||'overview')?'aria-current="page"':''}><svg viewBox="0 0 24 24">${key=='overview'?'<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/>':key=='users'?'<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>':key=='activity'?'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>':key=='rewards'?'<path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5l-5.4 3 1.2-6-4.5-4.2 6.1-.7z"/>':'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3.5"/>'}</svg><span>${label}</span></a>`).join('')}</nav></div>`:`<span class="nav-label">Không gian làm việc</span><nav class="nav" aria-label="Điều hướng chính">${links.map(([k,l,i])=>`<a href="#/${k}" class="${k==r?'on':''}" ${k==r?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ic[i]}</svg><span>${l}</span></a>`).join('')}</nav>`;
  const profileInitial=esc((me.username||'?').slice(0,1).toUpperCase());
  const mainContent=isAdmin?`<div class="admin-topbar"><label class="admin-quick-search" ${searchEnabled?'':'hidden'}><span aria-hidden="true">⌕</span><input id="admin-quick-search" ${searchAttribute} type="search" placeholder="Tìm trong trang hiện tại" aria-label="Tìm trong danh sách hiện tại"></label><div class="admin-topbar-spacer"></div><a class="admin-top-link" href="#/admin/users">Tài khoản</a><a class="admin-top-link" href="#/admin/surveys">Khảo sát</a><div class="admin-profile"><span class="admin-avatar" aria-hidden="true">${profileInitial}</span><span>${esc(me.username)}<small>Quản trị viên</small></span></div></div>${html}<footer class="admin-footer"><span>brainst0rm · Quản trị hệ thống</span><span>Chỉ tài khoản có quyền quản trị được truy cập</span></footer>`:html;
- app().innerHTML=`<aside class="side"><div class="logo"><i></i><span class="brand-word">brainst0rm</span>${isAdmin?'<button type="button" class="admin-nav-toggle" id="admin-nav-toggle" aria-label="Thu gọn thanh điều hướng" aria-expanded="true">‹</button>':''}</div>${navigation}
+ app().innerHTML=`${UIKit.skipLink('main-content')}<aside class="side"><div class="logo"><i></i><span class="brand-word">brainst0rm</span>${isAdmin?'<button type="button" class="admin-nav-toggle" id="admin-nav-toggle" aria-label="Thu gọn thanh điều hướng" aria-expanded="true">‹</button>':''}</div>${navigation}
  ${!isAdmin?`<div class="tip"><b>${svg('bulb')}Mẹo thiết kế</b>Nhóm 5–7 câu mỗi trang để giảm mệt mỏi nhận thức.</div>`:''}
- <div class="who"><span class="who-avatar" aria-hidden="true">${profileInitial}</span><span class="who-name"><span>${esc(me.username)}</span><small>${me.is_admin?'Quản trị viên':'Researcher'}</small></span><button id="out" type="button" aria-label="Đăng xuất" title="Đăng xuất">${svg('logout')}</button></div></aside><main class="workspace-main">${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}${credit}</main>`;
+ <div class="who"><span class="who-avatar" aria-hidden="true">${profileInitial}</span><span class="who-name"><span>${esc(me.username)}</span><small>${me.is_admin?'Quản trị viên':'Researcher'}</small></span><button id="out" type="button" aria-label="Đăng xuất" title="Đăng xuất">${svg('logout')}</button></div></aside><main class="workspace-main" id="main-content" tabindex="-1">${isAdmin?`<nav class="admin-breadcrumb" aria-label="Điều hướng đường dẫn"><a href="#/admin">Quản trị</a><span aria-hidden="true">/</span><span aria-current="page">${adminLabel}</span></nav>`:''}${mainContent}${credit}</main>`;
  if(isAdmin){
   $$('.admin-nav-group .nav a').forEach(link=>link.dataset.tooltip=$('span',link)?.textContent.trim()||'');
   const collapsed=localStorage.getItem('brainst0rm-admin-nav-collapsed')=='true';
@@ -166,10 +166,12 @@ const fail=(r,e,retry)=>{
  shell(r,`<div class="error-state" role="alert"><div class="error-mark" aria-hidden="true">!</div><h2>Chưa thể tải nội dung</h2><p>${esc(e.message||'Đã xảy ra lỗi. Vui lòng thử lại.')}</p><div class="error-actions"><button class="btn pri" id="retry">Thử lại</button><a class="btn" href="#/dashboard">Về tổng quan</a></div></div>`);
  $('#retry').onclick=retry||(()=>render())
 };
-const emptyState=(title,description,action='',icon='file')=>`<section class="empty-state">
- <span class="empty-state-icon" aria-hidden="true">${svg(icon)}</span>
- <div><h3>${esc(title)}</h3><p>${esc(description)}</p>${action?`<div class="empty-state-actions">${action}</div>`:''}</div>
-</section>`;
+const emptyState=(title,description,action='',icon='file')=>UIKit.emptyState({icon:svg(icon),title,text:description,action});
+
+/* Trang 404 của SPA: đường dẫn không tồn tại (trước đây rơi về tổng quan nên không báo gì). */
+function notFoundView(){
+ shell('dashboard',`<div class="not-found">${UIKit.emptyState({level:1,icon:svg('search'),title:'Không tìm thấy trang này',text:'Đường dẫn có thể đã bị đổi hoặc nhập sai. Hãy quay về tổng quan để tiếp tục.',action:UIKit.button({label:'Về tổng quan',variant:'primary',href:'#/dashboard'})})}</div>`);
+}
 
 /* ---------- Đăng nhập / đăng ký ---------- */
 function authView(){
@@ -520,13 +522,14 @@ const TIER_LABEL={green:'Xanh',yellow:'Vàng',red:'Đỏ'},TYPE_LABEL={self_repo
 const REWARD_ITEM_KINDS={title:'Danh hiệu',badge:'Huy hiệu',sticker:'Sticker',theme:'Giao diện',pet_item:'Đồ trang trí thú cưng'};
 const REWARD_ITEM_ASSETS=['star','leaf','moon','heart','sun'];
 const GAME_LABEL={breathing:'Vòng thở nhẹ',rest_timer:'Đồng hồ nghỉ',three_plans:'Lập ba việc ngày mai'};
-function taskDialog(task){
+function taskDialog(task,opts={}){
  return new Promise(resolve=>{
+  const sid=opts.surveyId||null;
   const t=task||{audience:['yellow'],completion_type:'self_report',points:10,times_per_day:1,is_active:true,is_placeholder:true,sort_order:0,game:null};
   const dialog=document.createElement('dialog');dialog.className='confirm-dialog admin-edit-dialog task-dialog';
   const field=(label,name,value,attrs='')=>`<label>${label}<input class="in" name="${name}" value="${esc(value??'')}" ${attrs}></label>`;
-  dialog.innerHTML=`<form class="dialog-content" method="dialog" id="task-form" novalidate><span class="chip c-run">${task?'Sửa nhiệm vụ':'Nhiệm vụ mới'}</span><h2>${task?esc(task.code):'Thêm nhiệm vụ'}</h2>
-   <div class="task-grid">${field('Mã nhiệm vụ','code',t.code,`maxlength="24" required ${task?'readonly':''}`)}${field('Tên nhiệm vụ','name',t.name,'maxlength="80" required')}</div>
+  dialog.innerHTML=`<form class="dialog-content" method="dialog" id="task-form" novalidate><span class="chip c-run">${task?'Sửa nhiệm vụ':'Nhiệm vụ mới'}</span><h2>${task?esc(sid?task.name:task.code):'Thêm nhiệm vụ'}</h2>
+   <div class="task-grid">${sid?'':field('Mã nhiệm vụ','code',t.code,`maxlength="24" required ${task?'readonly':''}`)}${field('Tên nhiệm vụ','name',t.name,'maxlength="80" required')}</div>
    <label>Mô tả<textarea class="in" name="description" rows="2" maxlength="400">${esc(t.description||'')}</textarea></label>
    <label>Hướng dẫn thực hiện<textarea class="in" name="instructions" rows="2" maxlength="800">${esc(t.instructions||'')}</textarea></label>
    <fieldset class="task-tiers"><legend>Nhóm áp dụng</legend>${['green','yellow','red'].map(tier=>`<label class="tk-check"><input type="checkbox" name="audience" value="${tier}" ${t.audience.includes(tier)?'checked':''}><span>${TIER_LABEL[tier]}</span></label>`).join('')}</fieldset>
@@ -534,6 +537,8 @@ function taskDialog(task){
     <div class="task-grid"><label>Cách xác minh<select class="sel" name="completion_type">${Object.entries(TYPE_LABEL).map(([k,v])=>`<option value="${k}" ${t.completion_type==k?'selected':''}>${v}</option>`).join('')}</select></label>${field('Thời gian tối thiểu (giây, cho đếm giờ)','min_seconds',t.min_seconds,'type="number" min="1" max="7200"')}</div>
     <label>Mini-game gắn với nhiệm vụ<select class="sel" name="game"><option value="">Không dùng mini-game</option>${Object.entries(GAME_LABEL).map(([key,label])=>`<option value="${key}" ${t.game===key?'selected':''}>${label}</option>`).join('')}</select><small class="admin-panel-hint">Mini-game chỉ dùng được với cách xác minh phù hợp; thời gian vẫn được máy chủ kiểm tra.</small></label>
    <div class="task-grid">${field('Số ký tự tối thiểu (cho đếm ký tự)','min_count',t.min_count,'type="number" min="1" max="2000"')}${field('Các lựa chọn (cách nhau bằng dấu |)','choices',(t.choices||[]).join(' | '),'maxlength="240"')}</div>
+   ${sid?`<fieldset class="task-days"><legend>Lịch theo ngày</legend><div class="task-grid">${field('Từ ngày thứ','start_day',t.start_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="1"')}${field('Đến ngày thứ','end_day',t.end_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="Để trống = đến hết"')}</div>
+    <p class="tk-hint">Ngày 1 là ngày học sinh hoàn thành lần đánh giá xác định nhóm của mình (giờ Việt Nam). Để trống cả hai ô nếu nhiệm vụ mở mọi ngày.</p>${field('Thứ tự khi cùng ngày bắt đầu','sort_order',t.sort_order??0,'type="number" min="-1000" max="1000" inputmode="numeric"')}</fieldset>`:''}
    <div class="task-grid">${field('Làm được từ giờ (HH:MM)','window_start',t.window_start,'placeholder="11:00" maxlength="5"')}${field('Đến giờ (HH:MM)','window_end',t.window_end,'placeholder="14:00" maxlength="5"')}</div>
    <div class="task-grid">${field('Thời gian thực hiện (phút)','duration_minutes',t.duration_minutes,'type="number" min="1" max="240"')}${field('Mô tả cách xác minh','verification',t.verification,'maxlength="200"')}</div>
    <label class="tk-check"><input type="checkbox" name="is_placeholder" ${t.is_placeholder?'checked':''}><span>Đây là dữ liệu <b>tạm thời</b> (bỏ chọn khi nội dung đã được duyệt chính thức)</span></label>
@@ -544,12 +549,12 @@ function taskDialog(task){
   $('[data-task-cancel]',dialog).onclick=()=>finish(null);dialog.addEventListener('cancel',e=>{e.preventDefault();finish(null)});
   $('#task-form',dialog).addEventListener('submit',async e=>{
    e.preventDefault();const f=e.currentTarget,num=n=>f[n].value===''?null:Number(f[n].value);
-   const body={code:f.code.value.trim(),name:f.name.value,description:f.description.value,instructions:f.instructions.value,audience:$$('[name=audience]:checked',f).map(b=>b.value),
+   const body={...(sid?{}:{code:f.code.value.trim()}),name:f.name.value,description:f.description.value,instructions:f.instructions.value,audience:$$('[name=audience]:checked',f).map(b=>b.value),
     points:num('points'),times_per_day:num('times_per_day'),completion_type:f.completion_type.value,min_seconds:num('min_seconds'),min_count:num('min_count'),
     choices:f.choices.value.split('|').map(s=>s.trim()).filter(Boolean),window_start:f.window_start.value.trim()||null,window_end:f.window_end.value.trim()||null,
-     duration_minutes:num('duration_minutes'),verification:f.verification.value,game:$('select[name=game]',f).value||null,is_placeholder:f.is_placeholder.checked,is_active:f.is_active.checked};
+     duration_minutes:num('duration_minutes'),verification:f.verification.value,game:$('select[name=game]',f).value||null,is_placeholder:f.is_placeholder.checked,is_active:f.is_active.checked,...(sid?{start_day:num('start_day'),end_day:num('end_day'),sort_order:num('sort_order')??0}:{})};
    const restore=setButtonLoading($('button[type=submit]',f),'Đang lưu…');
-   try{const r=task?await api('PUT','/admin/rewards/tasks/'+task.id,body):await api('POST','/admin/rewards/tasks',body);finish(r.task)}
+   try{const base=sid?`/tracking/surveys/${encodeURIComponent(sid)}/tasks`:'/admin/rewards/tasks';const r=task?await api('PUT',base+'/'+task.id,body):await api('POST',base,body);finish(r.task)}
    catch(error){restore();$('#task-error',f).textContent=error.message}});
   const completionSelect=$('select[name=completion_type]',dialog),gameSelect=$('select[name=game]',dialog);
   const syncGameOptions=()=>{const allowed=completionSelect.value==='timer'?['breathing','rest_timer']:completionSelect.value==='count_chars'?['three_plans']:[];$$('option[value]',gameSelect).forEach(option=>{if(option.value)option.disabled=!allowed.includes(option.value)});if(gameSelect.value&&!allowed.includes(gameSelect.value))gameSelect.value=''};
@@ -805,7 +810,7 @@ async function builderView(id){
  try{const got=await api('GET','/surveys/'+id);if(got.readOnly){location.replace('#/preview/'+id);return}cur={...got.survey,canDelete:got.canDelete!==false};selI=0;mode='edit';builderRender()}catch(e){fail('builder',e,()=>builderView(id))}}
 const pubLink=()=>`${location.origin}/#/s/${cur.public_slug}`;
 function builderRender(){
- shell('builder',`<div class="head"><div style="flex:1;min-width:260px"><input class="ttl" id="ttl" value="${esc(cur.title)}" maxlength="200" aria-label="Tên khảo sát"><p><span id="sv">Đã lưu</span> · <span id="qcount">${cur.questions.length} câu hỏi</span> · <span class="chip ${SL[cur.status][1]}">${SL[cur.status][0]}</span></p>
+ shell('builder',`<div class="head"><div style="flex:1;min-width:260px"><h1 class="sr-only">Trình tạo khảo sát</h1><input class="ttl" id="ttl" value="${esc(cur.title)}" maxlength="200" aria-label="Tên khảo sát"><p><span id="sv">Đã lưu</span> · <span id="qcount">${cur.questions.length} câu hỏi</span> · <span class="chip ${SL[cur.status][1]}">${SL[cur.status][0]}</span></p>
  ${cur.owner?`<small class="admin-panel-hint">Khảo sát của ${esc(cur.owner)} · quyền chỉnh sửa tạm thời</small>`:''}${cur.status=='published'?`<div class="linkbox"><span>${esc(pubLink())}</span><button id="cp">Sao chép</button></div>`:''}</div>
  <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="seg"><button data-m="edit" class="${mode=='edit'?'on':''}">Chỉnh sửa</button><button data-m="prev" class="${mode=='prev'?'on':''}">Xem trước</button></div>
  <a class="btn" href="#/tracking/${cur.id}">${svg('trend')}Theo dõi</a>${cur.canDelete?`<button class="btn text-danger" id="del">${svg('trash')}Xóa</button>`:''}<button class="btn pri" id="pub">${cur.status=='published'?'Hủy xuất bản':`${svg('send')}Xuất bản`}</button></div></div>
@@ -849,8 +854,8 @@ function drawPp(){
  const t=q.question_type,s=q.settings,attentionCheck=s.attention_check,consistencyCheck=s.consistency_check;
  const consistencyQuestions=['single','likert','rating'].includes(t)
   ?cur.questions.map((question,index)=>({question,index})).filter(({question,index})=>index!==selI&&question.question_type===t):[];
- pp.innerHTML=`<div class="pp-head"><h3>Thuộc tính</h3><span class="chip c-run">Câu ${selI+1} · ${TN[t]}</span></div><label class="lb">Nội dung câu hỏi</label><textarea id="qt" style="min-height:80px;margin:6px 0 14px">${esc(q.question_text)}</textarea>
- ${hasOpts(t)?`<label class="lb">${t=='matrix'?'Các hàng':'Lựa chọn'} (mỗi dòng một mục)</label><textarea id="qo" style="margin:6px 0 14px">${esc(q.options.map(o=>o.label).join('\n'))}</textarea>`:''}
+ pp.innerHTML=`<div class="pp-head"><h3>Thuộc tính</h3><span class="chip c-run">Câu ${selI+1} · ${TN[t]}</span></div><label class="lb" for="qt">Nội dung câu hỏi</label><textarea id="qt" style="min-height:80px;margin:6px 0 14px">${esc(q.question_text)}</textarea>
+ ${hasOpts(t)?`<label class="lb" for="qo">${t=='matrix'?'Các hàng':'Lựa chọn'} (mỗi dòng một mục)</label><textarea id="qo" style="margin:6px 0 14px">${esc(q.options.map(o=>o.label).join('\n'))}</textarea>`:''}
  ${t=='matrix'?`<label class="lb">Các cột (cách nhau bằng dấu phẩy)</label><input class="in" id="qc" value="${esc((s.cols||[]).join(', '))}" style="margin:6px 0 14px">`:''}
  ${t=='sd'?`<label class="lb">Cặp đối lập (mỗi dòng: trái | phải)</label><textarea id="qs" style="margin:6px 0 14px">${esc((s.pairs||[]).map(p=>p.join(' | ')).join('\n'))}</textarea>`:''}
  ${t=='likert'||t=='slider'?`<label class="lb">Nhãn hai đầu</label><input class="in" id="lo" value="${esc(s.lo||'')}" placeholder="Đầu thấp" style="margin:6px 0 8px"><input class="in" id="hi" value="${esc(s.hi||'')}" placeholder="Đầu cao">`:''}
@@ -896,7 +901,7 @@ async function surveyView(slug,previewId,opts={}){
   if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p>${Tracking.introHtml(trk)}<p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
   else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.bandHtml(S.result?.band)}${Tracking.doneHtml(trk,S)}${previewId?(readOnlyPreview?`<a class="btn" href="#/dashboard">Về tổng quan</a>`:`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`):''}</div>`;
   else{const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
-  bare(`<div class="sv"><div class="top"><i style="width:${w}%"></i></div><nav>${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':opts.home?'<span class="home-links"><a href="#/track/login">Khu học sinh</a><a href="#/login">Đăng nhập</a></span>':''}</span></nav><section>${inner}</section>${credit}</div>`);
+  bare(`<div class="sv">${UIKit.skipLink('sv-main')}<div class="top"><i style="width:${w}%"></i></div><nav aria-label="Khảo sát">${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':opts.home?'<span class="home-links"><a href="#/track/login">Khu học sinh</a><a href="#/login">Đăng nhập</a></span>':''}</span></nav><section id="sv-main" role="main" tabindex="-1">${inner}</section>${credit}</div>`);
   Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
   const st=$('#st');if(!st)return;const q=qs[S.i];
   const next=async()=>{const nextButton=$('#nx');if(nextButton.disabled)return;nextButton.disabled=true;const originalLabel=nextButton.textContent;const v=collect(q,st);if(v===undefined&&q.is_required){nextButton.disabled=false;toast('Vui lòng trả lời câu này để tiếp tục');return}
@@ -1177,5 +1182,6 @@ async function render(){
  }
  if(r=='research')return researchView(arg);
  if(r=='tracking')return Tracking.configView(arg);
+ if(r&&r!='dashboard')return notFoundView();
  return dashboardView()}
 addEventListener('hashchange',render);render();

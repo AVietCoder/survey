@@ -193,10 +193,11 @@
   /** Cảnh làng. interactive = true: công trình, nền đất, nhân vật và thú cưng là nút bấm được (bàn phím + chuột + chạm). */
   function scene(state, { night = false, fresh = new Set(), interactive = false } = {}) {
     const hit = (attrs, label) => interactive ? ` ${attrs} role="button" tabindex="0" aria-label="${esc(label)}"` : ''
+    const nextKey = nextOf(state.stars)?.key
     const placed = [...BUILDINGS].sort((a, b) => a.at[1] - b.at[1]).map(b => {
       const [w, h, art] = SPRITES[b.key]()
       const [x, base] = b.at
-      if (state.stars < b.stars) return b.key === 'cloudhouse' ? '' : `<g class="vl-hit vl-hit-plot"${hit(`data-building="${b.key}"`, `Nền đất chờ xây ${b.name}, mở ở ${b.stars} sao`)}>${plot(x, base, Math.min(w, 20))}</g>`
+      if (state.stars < b.stars) return b.key === 'cloudhouse' ? '' : `<g class="vl-hit vl-hit-plot${b.key === nextKey ? ' vl-next' : ''}"${hit(`data-building="${b.key}"`, `${b.key === nextKey ? 'Công trình kế tiếp: ' : ''}Nền đất chờ xây ${b.name}, mở ở ${b.stars} sao`)}>${plot(x, base, Math.min(w, 20))}</g>`
       const glow = night && ['teahouse', 'library', 'observatory', 'cloudhouse'].includes(b.key) ? ' vl-night' : ''
       return `<g class="vl-b vl-hit${fresh.has(b.key) ? ' vl-new' : ''}${glow}" transform="translate(${x} ${base - h})"${hit(`data-building="${b.key}"`, `${b.name}, đã xây. Nhấn để xem`)}><ellipse cx="${w / 2}" cy="${h}" rx="${w / 2}" ry="1.3" fill="#000" opacity=".10"/>${art}</g>`
     }).join('')

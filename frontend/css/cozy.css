@@ -1119,7 +1119,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:4px solid #fff
 @media(max-width:560px){.admin-shell .admin-topbar{margin-inline:0;padding-inline:0}.admin-profile{display:none}}
 
 /* nhãn tab đáy ở 320px */
-@media(max-width:340px){.app:not(.admin-shell) .side .nav a{font-size:.6875rem;letter-spacing:-.02em}}
+@media(max-width:340px){.app:not(.admin-shell) .side .nav a{font-size:.75rem;letter-spacing:-.02em}}
 
 /* tiêu đề khảo sát: cho xuống tối đa 2 dòng thay vì cắt "…" */
 .srow h3,.page-dashboard .srow-main h3{

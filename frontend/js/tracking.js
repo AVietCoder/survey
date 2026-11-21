@@ -53,11 +53,11 @@ const Tracking = (() => {
     const current = (location.hash.split('/')[2] || 'home') === 'tasks' ? 'village' : (location.hash.split('/')[2] || 'home')
     const participantTab = ['pet', 'tasks', 'inventory', 'village']
     const navItem = (key, label, icon, href) => { const active = current === key || (key === 'home' && !participantTab.includes(current)); return `<a href="${href}" class="${active ? 'on' : ''}" ${active ? 'aria-current="page"' : ''}><span class="tk-nav-icon">${svg(icon)}</span><span>${label}</span></a>` }
-    app().innerHTML = `<div class="tk">
+    app().innerHTML = `<div class="tk">${bare ? '' : UIKit.skipLink('tk-main')}
       <header class="tk-top"><a class="logo sv-logo" href="#/track" aria-label="brainst0rm — tiến triển của tôi"><i></i><span class="brand-word">brainst0rm</span></a>
         <a class="tk-top-link" href="#/track">Tiến triển của tôi</a></header>
       ${bare ? '' : `<nav class="tk-bottom-nav" aria-label="Điều hướng học sinh">${navItem('home','Tiến độ','trend','#/track')}${navItem('village','Vào game','home','#/track/village')}</nav>`}
-      <main class="tk-main ${wide ? 'tk-wide' : ''}" id="tk-main">${inner}</main>${credit}</div>`
+      <main class="tk-main ${wide ? 'tk-wide' : ''}" id="tk-main" tabindex="-1">${inner}</main>${credit}</div>`
     window.scrollTo(0, 0)
   }
   const loadingBlock = () => `<div class="tk-loading" role="status" aria-live="polite" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Đang tải…</div>`
@@ -304,7 +304,9 @@ const Tracking = (() => {
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     heart: '<path d="M20.8 8.8c0 4.2-8.8 10-8.8 10s-8.8-5.8-8.8-10a4.5 4.5 0 0 1 8.8-1.2 4.5 4.5 0 0 1 8.8 1.2Z"/>',
-    exit: '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/>'
+    exit: '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+    house: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+    flame: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>'
   }
   const gi = (name, label = '') => `<svg class="gw-i" viewBox="0 0 24 24" aria-hidden="true"${label ? ` aria-label="${esc(label)}"` : ''}>${GI[name]}</svg>`
 
@@ -360,6 +362,7 @@ const Tracking = (() => {
     const avatar = V.cleanAvatar(data.avatar)
     const tasks = today.enabled ? today.tasks : []
     const doneCount = tasks.filter(task => task.completed).length
+    const nextTask = tasks.find(task => !task.completed && task.name) || null
     const gained = game.lastStars !== null && data.stars > game.lastStars ? data.stars - game.lastStars : 0
     game.lastStars = data.stars
 
@@ -375,8 +378,8 @@ const Tracking = (() => {
           <small>${next ? `Sắp xây <b>${esc(next.name)}</b> · ${data.stars}/${next.stars} ${esc(unit.icon)}` : 'Làng đã đủ mọi công trình'}</small></div>
         <div class="gw-res">
           <span class="gw-chip${gained ? ' gw-pulse' : ''}" title="${esc(unit.name)} đã nhận"><span aria-hidden="true">${esc(unit.icon)}</span><b class="num">${data.stars}</b><span class="sr-only"> ${esc(unit.name)}</span>${gained ? `<span class="gw-gain" aria-hidden="true">+${gained}</span>` : ''}</span>
-          <span class="gw-chip" title="Công trình đã xây"><span aria-hidden="true">🏠</span><b class="num">${unlocked.length}/${V.BUILDINGS.length}</b><span class="sr-only"> công trình</span></span>
-          ${today.streak ? `<span class="gw-chip" title="Chuỗi ngày (chỉ để khích lệ)"><span aria-hidden="true">🔥</span><b class="num">${today.streak.current}</b><span class="sr-only"> ngày liên tiếp</span></span>` : ''}
+          <span class="gw-chip" title="Công trình đã xây"><span class="gw-chip-i">${gi('house')}</span><b class="num">${unlocked.length}/${V.BUILDINGS.length}</b><span class="sr-only"> công trình</span></span>
+          ${today.streak ? `<span class="gw-chip" title="Chuỗi ngày (chỉ để khích lệ)"><span class="gw-chip-i">${gi('flame')}</span><b class="num">${today.streak.current}</b><span class="sr-only"> ngày liên tiếp</span></span>` : ''}
         </div>
         <div class="gw-sys">
           ${today.support ? `<button type="button" class="gw-round gw-help" data-open="support" aria-label="Bạn cần người đồng hành?">${gi('heart')}</button>` : ''}
@@ -385,7 +388,7 @@ const Tracking = (() => {
       </header>
       ${today.enabled ? `<button type="button" class="gw-tracker" data-open="quests"><span class="gw-tracker-title">${gi('quest')}Việc hôm nay</span><span class="gw-tracker-count"><b>${doneCount}</b>/${tasks.length}</span>
         <span class="gw-tracker-bar" aria-hidden="true"><i style="width:${tasks.length ? doneCount / tasks.length * 100 : 0}%"></i></span></button>` : ''}
-      <div class="gw-bubble" id="gw-bubble" role="status"><span>${esc(V.greeting(data, hour))}</span><button type="button" aria-label="Ẩn lời chào" id="gw-bubble-x">${gi('close')}</button></div>
+      <div class="gw-bubble" id="gw-bubble" role="status"><div class="gw-bubble-text"><span>${esc(V.greeting(data, hour))}</span>${nextTask ? `<button type="button" class="gw-coach-go" data-open="quests">${gi('quest')}<span>Xem việc nhỏ<span class="gw-coach-name">: ${esc(nextTask.name)}</span></span></button>` : ''}</div><button type="button" aria-label="Ẩn lời chào" id="gw-bubble-x">${gi('close')}</button></div>
       <nav class="gw-actions" aria-label="Chức năng trong game">
         <button type="button" data-open="quests">${gi('quest')}<span>Nhiệm vụ</span>${tasks.length - doneCount > 0 ? `<em class="gw-badge" aria-label="${tasks.length - doneCount} việc chưa làm">${tasks.length - doneCount}</em>` : ''}</button>
         <button type="button" data-open="bag">${gi('bag')}<span>Túi đồ</span></button>
@@ -520,8 +523,14 @@ const Tracking = (() => {
       }
     } else if (kind === 'codex') {
       title.textContent = 'Sổ làng'
+      const built = V.unlockedOf(data.stars).length, total = V.BUILDINGS.length, upNext = V.nextOf(data.stars)
+      const teaser = text => { const first = String(text).split(/(?<=[.!?])\s/)[0]; return first.length > 90 ? `${first.slice(0, 88)}…` : first }
       body.innerHTML = `<p class="tk-hint">Mỗi công trình kể một điều về giấc ngủ. Đây là kiến thức phổ thông, không phải chẩn đoán hay lời khuyên y khoa. Ngưỡng mở khóa đang là bản thử nghiệm.</p>
-        <ul class="gw-codex">${V.BUILDINGS.map(b => { const open = data.stars >= b.stars; return `<li><button type="button" class="gw-codex-row${open ? '' : ' is-soon'}" data-building-open="${b.key}"><b>${esc(b.name)}</b><span>${open ? 'Đã xây' : `${b.stars} ${esc(unit.icon)}`}</span></button></li>` }).join('')}</ul>`
+        <div class="gw-collect"><b>Đã khám phá ${built}/${total}</b><div class="gw-xp gw-xp-lg" role="progressbar" aria-label="Số trang sổ làng đã mở" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${built}"><i style="width:${built / total * 100}%"></i></div></div>
+        <ul class="gw-codex">${V.BUILDINGS.map(b => {
+          const open = data.stars >= b.stars, done = b.tasks.reduce((sum, code) => sum + (data.tasks[code] || 0), 0), isNext = upNext?.key === b.key
+          return `<li><button type="button" class="gw-codex-row${open ? '' : ' is-soon'}${isNext ? ' is-next' : ''}" data-building-open="${b.key}"><span class="gw-codex-main"><b>${esc(b.name)}</b><small>${open ? esc(teaser(b.about)) : isNext ? `Tiếp theo · còn ${b.stars - data.stars} ${esc(unit.icon)}` : `Mở ở ${b.stars} ${esc(unit.icon)}`}</small></span><span class="gw-codex-state">${open ? (done ? `Đã làm ${done} lần` : 'Đã xây') : 'Chờ xây'}</span></button></li>`
+        }).join('')}</ul>`
       $$('[data-building-open]', body).forEach(button => button.onclick = () => openPanel('building', button.dataset.buildingOpen, button))
     } else if (kind === 'support') {
       title.textContent = 'Bạn cần người đồng hành?'
@@ -641,9 +650,9 @@ const Tracking = (() => {
       <p>Dùng tên đăng nhập và mật khẩu bạn đã tạo trong hồ sơ theo dõi.</p>
       <form id="tk-login-form" class="tk-form" novalidate>
         <label for="tk-login-user">Tên đăng nhập</label>
-        <input class="in" id="tk-login-user" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" required>
+        <input class="in" id="tk-login-user" placeholder="ví dụ: ban_an_nhien" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" required>
         <label for="tk-login-pass">Mật khẩu</label>
-        <input class="in" id="tk-login-pass" type="password" autocomplete="current-password" maxlength="72" required>
+        <input class="in" id="tk-login-pass" type="password" placeholder="Mật khẩu của bạn" autocomplete="current-password" maxlength="72" required>
         <p class="err" id="tk-login-error" role="alert"></p>
         <button class="btn pri" type="submit" id="tk-login-go">${svg('lock')}Đăng nhập</button></form>
       <div class="tk-login-alt"><a href="#/track/recover">Dùng mã khôi phục</a></div>
@@ -992,7 +1001,9 @@ const Tracking = (() => {
           <p class="tk-hint">Khi bạn sửa nội dung đồng ý hoặc tùy chọn trên, phiên bản đồng ý tăng lên và người đã tham gia sẽ được hỏi lại ở lần lưu tiếp theo.</p>
           <p class="err" id="tk-error" role="alert"></p>
           ${canEdit ? `<div class="tk-actions"><button class="btn pri" type="submit" id="tk-save">${svg('check')}Lưu cấu hình</button></div>` : ''}
-        </fieldset></form>`)
+        </fieldset></form>
+      <section class="card tk-sched" id="tk-sched" aria-labelledby="tk-sched-h"><h2 id="tk-sched-h">Nhiệm vụ và lịch</h2><div id="tk-sched-body">${loadingBlock()}</div></section>`)
+    loadSchedule(surveyId)
 
     const form = $('#tk-config')
     if (!canEdit) return
@@ -1102,6 +1113,57 @@ const Tracking = (() => {
         configView(surveyId)
       } catch (error) { restore(); $('#tk-error').textContent = error.message; $('#tk-error').scrollIntoView({ block: 'center' }) }
     }
+  }
+
+  /* ---- Nhiệm vụ riêng của khảo sát, xếp theo trục thời gian (ngày thứ N). Lưu riêng, không nằm trong nút "Lưu cấu hình". ---- */
+  const MAX_DAY_COLUMNS = 60
+  async function loadSchedule(surveyId) {
+    const box = $('#tk-sched-body')
+    if (!box) return
+    const url = `/tracking/surveys/${encodeURIComponent(surveyId)}/tasks`
+    let data
+    try { data = await api('GET', url) } catch (error) { box.innerHTML = `<p class="err" role="alert">${esc(error.message)}</p>`; return }
+    const { tasks, canEdit, available, cycleDays, groupLabels = {} } = data
+    const tierName = tier => groupLabels[tier] || tier
+    if (!available) { box.innerHTML = `<div class="notice" role="note">${svg('alert')}<div><strong>Cần chạy migration 021</strong><span>Chạy <code>backend/migrations/021_survey_reward_tasks.sql</code> trong Supabase SQL Editor để thêm nhiệm vụ riêng cho khảo sát. Khi chưa chạy, học sinh vẫn dùng bộ nhiệm vụ mẫu chung.</span></div></div>`; return }
+    const ends = tasks.map(task => task.end_day ?? task.start_day ?? 1)
+    const columns = Math.min(MAX_DAY_COLUMNS, Math.max(cycleDays || 14, 7, ...ends))
+    const weeks = Math.ceil(columns / 7)
+    const dayText = task => task.start_day || task.end_day ? `Ngày ${task.start_day ?? 1}${task.end_day ? `–${task.end_day}` : '→'}` : 'Mọi ngày'
+    const windowText = task => task.window_start ? `${task.window_start}–${task.window_end}` : 'Cả ngày'
+    const SHORT_TYPE = { self_report: 'Tự báo cáo', timer: 'Đếm giờ', count_chars: 'Đếm ký tự', choice: 'Chọn loại' }
+    const answerText = task => `${SHORT_TYPE[task.completion_type] || task.completion_type}${task.completion_type === 'timer' ? ` ${Math.round(task.min_seconds / 60)}′` : task.completion_type === 'count_chars' ? ` ≥${task.min_count}` : task.completion_type === 'choice' ? ` (${(task.choices || []).length})` : ''}`
+    const audienceText = task => task.audience.length === 3 ? 'Mọi nhóm' : task.audience.map(tierName).join(', ')
+    const cell = (task, day) => {
+      const on = (!task.start_day || day >= task.start_day) && (!task.end_day || day <= task.end_day)
+      return `<td class="tk-day${on ? ' is-on' : ''}${task.is_active ? '' : ' is-off'}" aria-label="Ngày ${day}: ${on ? 'có nhiệm vụ' : 'không có'}">${on ? '<span aria-hidden="true">●</span>' : ''}</td>`
+    }
+    const rows = tasks.map(task => `<tr class="${task.is_active ? '' : 'is-hidden'}">
+        <th scope="row" class="tk-sched-name"><b>${esc(task.name)}</b>${task.is_active ? '' : ' <span class="chip c-end">Đã ẩn</span>'}${task.description ? `<small>${esc(task.description)}</small>` : ''}</th>
+        <td>${esc(answerText(task))}</td><td>${esc(audienceText(task))}</td><td class="num">${task.points}</td><td>${esc(windowText(task))}</td><td><b>${esc(dayText(task))}</b></td>
+        ${Array.from({ length: columns }, (_, i) => cell(task, i + 1)).join('')}
+        <td class="tk-sched-actions">${canEdit ? `<button class="btn btn-sm" type="button" data-sched-edit="${esc(task.id)}">Sửa</button><button class="btn btn-sm" type="button" data-sched-toggle="${esc(task.id)}" aria-pressed="${task.is_active ? 'false' : 'true'}">${task.is_active ? 'Ẩn' : 'Hiện'}</button>` : ''}</td></tr>`).join('')
+    const weekHead = Array.from({ length: weeks }, (_, w) => `<th scope="colgroup" colspan="${Math.min(7, columns - w * 7)}" class="tk-week">Tuần ${w + 1}</th>`).join('')
+    const dayHead = Array.from({ length: columns }, (_, i) => `<th scope="col" class="tk-dayno num">${i + 1}</th>`).join('')
+    box.innerHTML = `<p class="tk-hint">Mỗi hàng là một nhiệm vụ: cách học sinh trả lời hoặc hoàn thành, nhóm nhận, điểm, khung giờ và các ngày hiển thị. Ngày 1 là ngày học sinh hoàn thành lần đánh giá xác định nhóm của họ. Bạn có thể thêm bao nhiêu nhiệm vụ tùy ý.</p>
+      <p class="tk-hint">Khi khảo sát này có ít nhất một nhiệm vụ riêng đang hiện, học sinh chỉ thấy các nhiệm vụ riêng (không lẫn với bộ nhiệm vụ mẫu chung). Nhiệm vụ không bị xóa, chỉ ẩn, để giữ lịch sử điểm. Lựa chọn của học sinh không ảnh hưởng đến điểm và nội dung họ nhập không được lưu.</p>
+      ${canEdit ? `<div class="tk-actions"><button class="btn pri" type="button" id="tk-sched-add">${svg('plus')}Thêm nhiệm vụ</button></div>` : '<p class="tk-hint">Chỉ chủ sở hữu khảo sát mới thêm hoặc sửa được nhiệm vụ.</p>'}
+      ${tasks.length ? `<div class="tk-sched-wrap" role="region" aria-label="Lịch nhiệm vụ theo ngày" tabindex="0"><table class="tk-sched-table"><caption class="sr-only">Nhiệm vụ của khảo sát xếp theo ngày bắt đầu. Cột ● đánh dấu ngày có nhiệm vụ.</caption>
+        <thead><tr><th scope="col" rowspan="2" class="tk-sched-name">Nhiệm vụ</th><th scope="col" rowspan="2">Cách trả lời</th><th scope="col" rowspan="2">Nhóm</th><th scope="col" rowspan="2">Điểm</th><th scope="col" rowspan="2">Khung giờ</th><th scope="col" rowspan="2">Ngày</th>${weekHead}<th scope="col" rowspan="2"><span class="sr-only">Thao tác</span></th></tr><tr>${dayHead}</tr></thead>
+        <tbody>${rows}</tbody></table></div>` : emptyState('Khảo sát này chưa có nhiệm vụ riêng', 'Cho đến khi bạn thêm nhiệm vụ, học sinh dùng bộ nhiệm vụ mẫu chung (tạm thời). brainst0rm không tự điền nội dung nhiệm vụ chính thức.')}`
+    if (!canEdit) return
+    const dialogOpts = { surveyId }
+    $('#tk-sched-add').onclick = async () => { if (await taskDialog(null, dialogOpts)) { toast('Đã thêm nhiệm vụ'); loadSchedule(surveyId) } }
+    $$('[data-sched-edit]', box).forEach(button => button.onclick = async () => {
+      const task = tasks.find(item => item.id === button.dataset.schedEdit)
+      if (task && await taskDialog(task, dialogOpts)) { toast('Đã lưu nhiệm vụ'); loadSchedule(surveyId) }
+    })
+    $$('[data-sched-toggle]', box).forEach(button => button.onclick = async () => {
+      const task = tasks.find(item => item.id === button.dataset.schedToggle)
+      if (!task) return
+      const restore = setButtonLoading(button, '…')
+      try { await api('PUT', `${url}/${encodeURIComponent(task.id)}`, { is_active: !task.is_active }); loadSchedule(surveyId) } catch (error) { restore(); toast(error.message) }
+    })
   }
 
   return { context, introHtml, wantsTrack, bandHtml, doneHtml, wireDone, participantRoute, configView }
