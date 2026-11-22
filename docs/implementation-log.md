@@ -94,3 +94,13 @@ Tách ra từ `CLAUDE.md`. Mỗi mục: đã làm gì, file/migration, cách ki�
 - UI kit dùng chung: thêm `UIKit.inputField`/`textareaField` trong `components.js`; `app.js` dùng chung cho `taskDialog`, `rewardItemDialog` và trình tạo câu hỏi.
 - Test: `backend/test/survey-questions.test.js` (7) và `backend/test/survey-question-time-http.test.js` (3); toàn bộ `npm test` xanh (209 test). Kiểm tra cú pháp `node --check` cho `app.js`, `components.js`, `tracking.js`, `surveys.js` đều qua.
 - Chưa kiểm chứng: ảnh render thật ở 1440/820/390 px (Firefox headless trong môi trường này không khởi chạy được qua playwright-core; harness Chrome trước đây đã bị dọn); migration `022` chưa chạy trên Supabase thật; cần người dùng chạy tay.
+
+#### Ba kiểu nhân vật + đổi thú cưng nhanh hơn (2026-11-22, theo newtask.md)
+
+- Nhân vật: giữ **Mặc định** (tùy chỉnh màu da/tóc/áo như cũ), thêm **Emma** (mũ lông trắng trùm đầu, áo đen kiểu gấu trúc, tóc đen, mắt to, má hồng, môi chúm chím) và **Tịnh** (chó bông đầu kem, tai cụp, thân trắng, mắt to). Cả hai vẽ bằng SVG pixel nội tuyến trong `frontend/js/village.js`, chỉ tham khảo ảnh người dùng gửi, không tải/nhúng ảnh thật và không thu thêm dữ liệu.
+- Backend: `reward.js` thêm `AVATAR_PRESETS = ['default','emma','tinh']`; `normalizeAvatar` chỉ lưu khóa `preset` khi là nhân vật dựng sẵn (bỏ qua/không lưu `default` để dữ liệu cũ giữ nguyên hình dạng), preset lạ bị bỏ qua khi đọc và trả 400 khi ghi nghiêm ngặt. Không cần migration mới (`equipped` là JSONB).
+- Giao diện: `tracking.js` `avatarEditor` thêm ba thẻ chọn kiểu nhân vật (có ảnh xem trước); khi chọn Emma/Tịnh thì ẩn phần chỉnh bộ phận, chọn Mặc định thì hiện lại. `village.js` xuất `CHARACTER_PRESETS`, `heroMarkup`, `companionMarkup`.
+- Tốc độ đổi thú cưng/nhân vật: trước đây mỗi lần bấm là dựng lại **toàn bộ cảnh làng** (~12–14 KB SVG) rồi thay hai nhóm; nay chỉ thay phần thân bên trong `.vl-hero`/`.vl-cat` và chân dung HUD. Đổi thú cưng vẫn lạc quan (hiện ngay), thêm spinner trên nút đang lưu + dòng trạng thái `aria-live`, hoàn tác nếu API lỗi. Lưu nhân vật không còn gọi lại `gameView('hero')` (không tải lại 3 API).
+- CSS: `.vl-presets`, `.vl-preset*`, `#vl-parts[hidden]`, `.vl-pet-status`, `.vl-pill.is-saving`, hoạt ảnh `.vl-swap` (tắt khi `prefers-reduced-motion: reduce`); mobile ≤380px xếp thẻ 2 cột.
+- Test: thêm 1 test preset trong `backend/test/reward.test.js`; `npm test` xanh 210/210. Đã kiểm tra cú pháp `node --check` cho `village.js`, `tracking.js`, `reward.js`.
+- Chưa kiểm chứng: ảnh render thật trong trình duyệt (chỉ raster hóa các `<rect>` bằng PIL để xem hình pixel; chưa chạy Chrome/Firefox headless trong môi trường này). Cần người dùng mở `#/track/village` → Nhân vật để xem ở 1440/820/390 px.

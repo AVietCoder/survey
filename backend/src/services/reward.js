@@ -27,9 +27,16 @@ const MAX_COUNT = 5000
  * Giới hạn khớp với bảng bộ phận trong frontend/js/village.js (AVATAR_PARTS).
  */
 export const AVATAR_LIMITS = { skin: 5, hair: 7, style: 4, shirt: 8, hat: 4 }
+/** Ba kiểu nhân vật có sẵn: mặc định (tùy chỉnh) và hai nhân vật dựng sẵn Emma/Tịnh. */
+export const AVATAR_PRESETS = ['default', 'emma', 'tinh']
 export const DEFAULT_AVATAR = Object.fromEntries(Object.keys(AVATAR_LIMITS).map(key => [key, 0]))
 export function normalizeAvatar(input, { strict = false } = {}) {
   const out = { ...DEFAULT_AVATAR }
+  // preset là tùy chọn: chỉ lưu khi là nhân vật dựng sẵn, để dữ liệu cũ không đổi hình dạng.
+  if (input?.preset !== undefined && input.preset !== 'default') {
+    if (AVATAR_PRESETS.includes(input.preset)) out.preset = input.preset
+    else if (strict) throw new HttpError(400, 'Nhân vật không hợp lệ')
+  }
   for (const [key, limit] of Object.entries(AVATAR_LIMITS)) {
     const value = input?.[key]
     if (value === undefined && !strict) continue

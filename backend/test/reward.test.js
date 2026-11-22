@@ -324,3 +324,17 @@ test('avatar: only in-range part indices are stored; invalid input is rejected; 
   const cat = await service.equip(PROFILE, { kind: 'pet', itemCode: 'fox' })
   assert.equal(cat.pet, 'fox'); assert.deepEqual(cat.avatar, max, 'đổi thú cưng không mất nhân vật')
 })
+
+test('avatar presets: Emma/Tịnh are accepted, unknown presets are ignored or rejected in strict mode', async () => {
+  const { service } = await boot()
+  const base = Object.fromEntries(Object.keys(AVATAR_LIMITS).map(key => [key, 0]))
+  assert.deepEqual(normalizeAvatar({ ...base, preset: 'emma' }), { ...base, preset: 'emma' })
+  assert.deepEqual(normalizeAvatar({ ...base, preset: 'tinh' }), { ...base, preset: 'tinh' })
+  assert.deepEqual(normalizeAvatar({ ...base, preset: 'default' }), base, 'mặc định không lưu thêm khóa preset')
+  assert.deepEqual(normalizeAvatar({ ...base, preset: '<script>' }), base, 'preset lạ bị bỏ qua khi đọc')
+  assert.throws(() => normalizeAvatar({ ...base, preset: 'hacker' }, { strict: true }), { status: 400 })
+  const saved = await service.equip(PROFILE, { kind: 'avatar', avatar: { ...base, preset: 'tinh' } })
+  assert.equal(saved.avatar.preset, 'tinh')
+  assert.equal((await service.inventory(PROFILE)).avatar.preset, 'tinh', 'đọc lại vẫn giữ nhân vật dựng sẵn')
+  assert.equal((await service.village(PROFILE)).avatar.preset, 'tinh')
+})

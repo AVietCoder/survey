@@ -317,9 +317,15 @@ const Tracking = (() => {
         ? `<button type="button" class="vl-sw" style="--c:${value}" data-part="${key}" data-i="${index}" aria-label="${esc(part.label)} ${index + 1}" aria-pressed="${draft[key] === index}"></button>`
         : `<button type="button" class="vl-pill" data-part="${key}" data-i="${index}" aria-pressed="${draft[key] === index}">${esc(value)}</button>`).join('')}</div></fieldset>`
     }
+    const preset = item => `<button type="button" class="vl-preset" data-preset="${item.key}" aria-pressed="${draft.preset === item.key}" aria-label="Nhân vật ${esc(item.name)}: ${esc(item.hint)}">
+      <span class="vl-preset-art" aria-hidden="true">${V.avatarSvg({ preset: item.key })}</span><b>${esc(item.name)}</b><small>${esc(item.hint)}</small></button>`
     return `<div class="vl-editor"><div class="vl-preview" id="vl-preview">${V.avatarSvg(draft)}</div>
-      <div class="vl-controls">${['skin', 'hair', 'style', 'shirt', 'hat'].map(group).join('')}
-        <fieldset class="vl-fs"><legend>Bạn đồng hành</legend><div class="vl-opts">${Object.entries(pets).map(([code, name]) => `<button type="button" class="vl-pill" data-pet="${code}" aria-pressed="${code === selectedPet}">${esc(name)}</button>`).join('')}</div></fieldset>
+      <div class="vl-controls">
+        <fieldset class="vl-fs"><legend>Kiểu nhân vật</legend><div class="vl-presets">${V.CHARACTER_PRESETS.map(preset).join('')}</div></fieldset>
+        <p class="tk-hint" id="vl-preset-hint" ${draft.preset === 'default' ? 'hidden' : ''}>Emma và Tịnh là nhân vật dựng sẵn. Chọn <b>Mặc định</b> nếu bạn muốn tự đổi màu da, tóc, áo.</p>
+        <div id="vl-parts" ${draft.preset === 'default' ? '' : 'hidden'}>${['skin', 'hair', 'style', 'shirt', 'hat'].map(group).join('')}</div>
+        <fieldset class="vl-fs"><legend>Bạn đồng hành</legend><div class="vl-opts">${Object.entries(pets).map(([code, name]) => `<button type="button" class="vl-pill" data-pet="${code}" aria-pressed="${code === selectedPet}">${esc(name)}</button>`).join('')}</div>
+          <p class="vl-pet-status" id="vl-pet-status" role="status" aria-live="polite"></p></fieldset>
         <div class="gw-panel-actions"><button class="btn pri" type="button" id="vl-save">Lưu nhân vật</button><button class="btn" type="button" id="vl-reset">Hoàn tác</button></div></div></div>`
   }
 
@@ -472,32 +478,62 @@ const Tracking = (() => {
       const pets = window.RewardPet?.species || {}
       const draft = V.cleanAvatar(data.avatar), saved = { ...draft }
       let selectedPet = ['cat', 'bunny', 'fox', 'bear'].includes(data.pet) ? data.pet : 'cat'
-      body.innerHTML = `<p class="tk-hint">Chọn bộ phận có sẵn. Thay đổi hiện ngay trên nhân vật trong làng; đổi bao nhiêu lần cũng được.</p>${avatarEditor(V, draft, pets, selectedPet)}`
-      // Vẽ lại nhân vật + bạn đồng hành ngay trong làng (chưa lưu thì chỉ là xem trước).
-      const repaint = () => {
+      body.innerHTML = `<p class="tk-hint">Chọn kiểu nhân vật có sẵn, hoặc chọn <b>Mặc định</b> để tự đổi màu da, tóc, áo. Thay đổi hiện ngay trong làng; đổi bao nhiêu lần cũng được.</p>${avatarEditor(V, draft, pets, selectedPet)}`
+      // Chỉ thay phần thân nhân vật/thú cưng trong cảnh, không dựng lại cả làng: đổi rất nhanh trên máy yếu.
+      const bump = el => { if (!el) return; el.classList.remove('vl-swap'); void el.getBoundingClientRect(); el.classList.add('vl-swap') }
+      const repaint = ({ animate = false } = {}) => {
         $('#vl-preview').innerHTML = V.avatarSvg(draft)
-        const temp = document.createElement('div')
-        temp.innerHTML = V.scene({ ...data, avatar: draft, pet: selectedPet }, { night: $('#gw').classList.contains('is-night'), interactive: true })
-        for (const cls of ['.vl-hit-hero', '.vl-hit-pet']) { const old = $(`#gw-world ${cls}`), fresh = $(cls, temp); if (old && fresh) old.replaceWith(fresh) }
+        const world = $('#gw-world')
+        const heroHit = world?.querySelector('.vl-hit-hero'), petHit = world?.querySelector('.vl-hit-pet')
+        const heroPart = heroHit?.querySelector('.vl-hero'), petPart = petHit?.querySelector('.vl-cat')
+        if (heroPart) heroPart.innerHTML = V.heroMarkup(draft)
+        if (petPart) petPart.innerHTML = V.companionMarkup(selectedPet)
+        if (animate) { bump(heroHit); bump(petHit) }
+        const portrait = $('#gw .gw-portrait-img')
+        if (portrait) portrait.innerHTML = V.avatarSvg(draft)
+        $('#vl-parts').hidden = draft.preset !== 'default'
+        $('#vl-preset-hint').hidden = draft.preset === 'default'
         $$('[data-part]', body).forEach(button => button.setAttribute('aria-pressed', String(draft[button.dataset.part] === Number(button.dataset.i))))
         $$('[data-pet]', body).forEach(button => button.setAttribute('aria-pressed', String(button.dataset.pet === selectedPet)))
+        $$('[data-preset]', body).forEach(button => button.setAttribute('aria-pressed', String(button.dataset.preset === draft.preset)))
       }
       const friendly = error => error.status >= 500 || !error.status ? 'Chưa lưu được, hãy thử lại sau ít phút.' : error.message
       $$('[data-part]', body).forEach(button => button.onclick = () => { draft[button.dataset.part] = Number(button.dataset.i); repaint() })
-      $('#vl-reset').onclick = () => { Object.assign(draft, saved); repaint() }
+      $$('[data-preset]', body).forEach(button => button.onclick = () => {
+        if (button.dataset.preset === draft.preset) return
+        draft.preset = button.dataset.preset; repaint({ animate: true })
+      })
+      $('#vl-reset').onclick = () => { Object.assign(draft, saved); repaint({ animate: true }) }
       $('#vl-save').onclick = async event => {
         const restore = setButtonLoading(event.currentTarget, 'Đang lưu…')
-        try { await tapi('POST', '/track/rewards/equip', { kind: 'avatar', avatar: draft }); data.avatar = { ...draft }; toast('Đã lưu nhân vật của bạn'); gameView('hero') }
-        catch (error) { restore(); toast(friendly(error), 'error') }
+        try {
+          await tapi('POST', '/track/rewards/equip', { kind: 'avatar', avatar: draft })
+          Object.assign(saved, draft); data.avatar = { ...draft }
+          toast('Đã lưu nhân vật của bạn'); repaint()
+        } catch (error) { toast(friendly(error), 'error') }
+        finally { restore() }
       }
       $$('[data-pet]', body).forEach(button => button.onclick = async () => {
         if (button.dataset.pet === selectedPet || button.disabled) return
-        const previous = selectedPet
-        selectedPet = button.dataset.pet; repaint()                 // đổi ngay trong làng, lỗi thì trả lại
+        const previous = selectedPet, status = $('#vl-pet-status')
+        selectedPet = button.dataset.pet
+        button.classList.add('is-saving'); button.setAttribute('aria-busy', 'true')
+        if (status) status.textContent = 'Đang đổi bạn đồng hành…'
+        repaint({ animate: true })                 // đổi ngay trong làng, lỗi thì trả lại
         $$('[data-pet]', body).forEach(x => { x.disabled = true })
-        try { await tapi('POST', '/track/rewards/equip', { kind: 'pet', itemCode: selectedPet }); data.pet = selectedPet; toast(`Đã đổi bạn đồng hành: ${pets[selectedPet] || ''}`) }
-        catch (error) { selectedPet = previous; repaint(); toast(friendly(error), 'error') }
-        finally { $$('[data-pet]', body).forEach(x => { x.disabled = false }) }
+        try {
+          await tapi('POST', '/track/rewards/equip', { kind: 'pet', itemCode: selectedPet })
+          data.pet = selectedPet
+          if (status) status.textContent = `Đã đổi bạn đồng hành: ${pets[selectedPet] || ''}`
+          toast(`Đã đổi bạn đồng hành: ${pets[selectedPet] || ''}`)
+        } catch (error) {
+          selectedPet = previous; repaint({ animate: true })
+          if (status) status.textContent = ''
+          toast(friendly(error), 'error')
+        } finally {
+          button.classList.remove('is-saving'); button.removeAttribute('aria-busy')
+          $$('[data-pet]', body).forEach(x => { x.disabled = false })
+        }
       })
     } else if (kind === 'bag') {
       title.textContent = 'Túi đồ'

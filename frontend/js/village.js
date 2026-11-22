@@ -89,17 +89,84 @@
     hat: { label: 'Phụ kiện', names: ['Không đội', 'Mũ len', 'Mũ lưỡi trai', 'Vòng hoa'] }
   }
   const DEFAULT_AVATAR = { skin: 1, hair: 0, style: 0, shirt: 0, hat: 0 }
+  /* Ba kiểu nhân vật: Mặc định (tùy chỉnh như cũ), Emma (mũ lông trắng, môi chúm chím), Tịnh (chó bông kem).
+     Chỉ số bộ phận vẫn giữ nguyên; preset chỉ đổi hình vẽ, không thu thêm dữ liệu. */
+  const CHARACTER_PRESETS = [
+    { key: 'default', name: 'Mặc định', hint: 'Tự chọn màu da, tóc, áo' },
+    { key: 'emma', name: 'Emma', hint: 'Áo đen, mũ lông trắng' },
+    { key: 'tinh', name: 'Tịnh', hint: 'Chó bông kem dễ thương' }
+  ]
+  const PRESET_KEYS = CHARACTER_PRESETS.map(preset => preset.key)
   function cleanAvatar(input) {
-    const out = { ...DEFAULT_AVATAR }
+    const out = { ...DEFAULT_AVATAR, preset: PRESET_KEYS.includes(input?.preset) ? input.preset : 'default' }
     for (const key of Object.keys(AVATAR_PARTS)) {
       const limit = (AVATAR_PARTS[key].colors || AVATAR_PARTS[key].names).length
       if (Number.isInteger(input?.[key]) && input[key] >= 0 && input[key] < limit) out[key] = input[key]
     }
     return out
   }
+  /** Emma: mũ lông trắng trùm đầu, áo đen kiểu gấu trúc, môi chúm chím, má hồng (theo ảnh tham khảo).
+   *  Vẽ trên lưới pixel nguyên 12×17 để các ô vuông hiện rõ, không dùng tọa độ lẻ. */
+  function emmaBody() {
+    const hood = '#FFFFFF', fluff = '#F1EDFB', fluffDk = '#DCD5EE', hair = '#241F2E', hairLt = '#3A3348'
+    const skin = '#F7D2B6', dress = '#2B2433', ink = C.ink, lip = '#E58A9B', lipDk = '#C96D80'
+    return (
+      // mũ lông trắng: khối pixel vuông + tua lông nhô ra
+      r(2, 0, 8, 1, hood) + r(1, 1, 10, 1, hood) + r(0, 2, 2, 6, hood) + r(10, 2, 2, 6, hood) + r(1, 8, 10, 1, hood) +
+      r(1, -1, 1, 1, fluff) + r(4, -1, 1, 1, hood) + r(7, -1, 1, 1, fluff) + r(10, -1, 1, 1, hood) +
+      r(-1, 3, 1, 1, fluff) + r(-1, 6, 1, 1, fluff) + r(12, 3, 1, 1, fluff) + r(12, 6, 1, 1, fluff) +
+      r(0, 8, 1, 1, fluff) + r(11, 8, 1, 1, fluff) +
+      // viền trong mũ
+      r(2, 2, 8, 1, fluffDk) + r(2, 2, 1, 6, fluffDk) + r(9, 2, 1, 6, fluffDk) + r(2, 8, 8, 1, fluffDk) +
+      // tóc đen + mái + lọn hai bên
+      r(3, 2, 6, 6, hair) + r(3, 2, 6, 1, hair) + r(2, 3, 1, 4, hair) + r(9, 3, 1, 4, hair) + r(4, 2, 2, 1, hairLt) +
+      // mặt
+      r(3, 3, 6, 5, skin) +
+      // mắt 2×2 có chấm sáng + má hồng
+      r(3, 4, 2, 2, ink) + r(7, 4, 2, 2, ink) + r(3, 4, 1, 1, C.white) + r(7, 4, 1, 1, C.white) +
+      r(3, 6, 1, 1, C.cheek) + r(8, 6, 1, 1, C.cheek) +
+      // môi chúm chím
+      r(5, 6, 2, 1, lip) + r(5, 6, 1, 1, lipDk) +
+      // cổ áo lông + thân áo đen + dây rút + túi trắng
+      r(3, 8, 6, 1, hood) + r(2, 9, 8, 6, dress) +
+      r(4, 10, 1, 2, fluffDk) + r(7, 10, 1, 2, fluffDk) +
+      r(4, 12, 4, 2, fluff) + r(4, 12, 4, 1, fluffDk) +
+      // tay áo đen + bàn tay nhỏ
+      r(1, 9, 1, 4, dress) + r(10, 9, 1, 4, dress) + r(1, 13, 1, 1, skin) + r(10, 13, 1, 1, skin) +
+      // chân đen + giày trắng (điểm trắng kiểu gấu trúc)
+      r(3, 15, 2, 2, dress) + r(7, 15, 2, 2, dress) +
+      r(2, 16, 3, 1, fluff) + r(7, 16, 3, 1, fluff) + r(2, 17, 3, 1, ink) + r(7, 17, 3, 1, ink)
+    )
+  }
+  /** Tịnh: chó bông đầu kem, tai cụp, thân trắng, mắt to có chấm sáng, một tay dang ra (theo ảnh tham khảo). */
+  function tinhBody() {
+    const fur = '#EAD9BC', furDk = '#CBB28F', white = '#FFFFFF', belly = '#F7F4FF', ink = '#2B2433'
+    return (
+      // tai cụp hai bên
+      r(0.2, 2.4, 2, 2.4, furDk) + r(0.6, 4.4, 1.6, 1.4, furDk) +
+      r(9.8, 2.4, 2, 2.4, furDk) + r(9.8, 4.4, 1.6, 1.4, furDk) +
+      // đầu bo tròn + vệt sáng giữa trán
+      r(2.2, 1.2, 7.6, 0.8, fur) + r(1.6, 2, 8.8, 5.4, fur) + r(2.2, 7.2, 7.6, 1, fur) + r(5.6, 1.5, 0.9, 2.8, '#F4E8D2') +
+      // mõm trắng
+      r(3.4, 5.2, 5.2, 3.2, white) + r(4.2, 7.6, 3.6, 0.8, white) +
+      // mắt to có chấm sáng + mũi + miệng
+      r(2.7, 3.9, 1.9, 2.5, ink) + r(7.4, 3.9, 1.9, 2.5, ink) +
+      r(3, 4.2, 0.8, 0.8, white) + r(7.7, 4.2, 0.8, 0.8, white) +
+      r(5.4, 5.8, 1.4, 1, ink) + r(5.7, 6.8, 0.8, 0.5, ink) +
+      // thân trắng, bụng kem, tay dang ra
+      r(2.6, 8.3, 6.8, 6.2, white) + r(3.5, 9.4, 5, 4.4, belly) +
+      r(0.2, 9.1, 2.4, 1.5, white) + r(9.4, 8.7, 2.4, 1.5, white) + r(0.2, 9.1, 0.9, 1, furDk) + r(11, 8.7, 0.9, 1, furDk) +
+      // chân + bàn chân có ngón
+      r(3.4, 14.2, 2, 2.3, white) + r(6.6, 14.2, 2, 2.3, white) +
+      r(3.4, 16.5, 2, 0.5, furDk) + r(6.6, 16.5, 2, 0.5, furDk)
+    )
+  }
   /** Phần thân nhân vật trong hệ tọa độ 12x17 (có thể vẽ lên phía trên y = 0 cho búi tóc/mũ). */
   function heroBody(avatar) {
-    const a = cleanAvatar(avatar), skin = AVATAR_PARTS.skin.colors[a.skin], hair = AVATAR_PARTS.hair.colors[a.hair], shirt = AVATAR_PARTS.shirt.colors[a.shirt]
+    const a = cleanAvatar(avatar)
+    if (a.preset === 'emma') return emmaBody()
+    if (a.preset === 'tinh') return tinhBody()
+    const skin = AVATAR_PARTS.skin.colors[a.skin], hair = AVATAR_PARTS.hair.colors[a.hair], shirt = AVATAR_PARTS.shirt.colors[a.shirt]
     const hairBack = a.style === 1 ? r(1, 3, 10, 8, hair) : ''
     const hairTop = [
       r(3, 0, 6, 2, hair) + r(2, 1, 8, 2, hair) + r(2, 3, 1, 2, hair) + r(9, 3, 1, 2, hair),
@@ -122,7 +189,9 @@
   }
   /** Hình xem trước độc lập (thẻ HUD và màn hình tùy chỉnh). */
   function avatarSvg(avatar, label = 'Nhân vật của bạn') {
-    return `<svg class="vl-avatar" viewBox="-1 -4 14 22" shape-rendering="crispEdges" role="img" aria-label="${esc(label)}">${heroBody(avatar)}</svg>`
+    // Khung nhìn vừa với từng kiểu: nhân vật dựng sẵn không cần chừa chỗ cho búi tóc/mũ.
+    const box = avatar?.preset === 'emma' ? '-1 -1 14 19' : avatar?.preset === 'tinh' ? '-1 0 14 18' : '-1 -4 14 22'
+    return `<svg class="vl-avatar" viewBox="${box}" shape-rendering="crispEdges" role="img" aria-label="${esc(label)}">${heroBody(avatar)}</svg>`
   }
   /* ---------- bạn đồng hành pixel theo loài đã chọn (màu khớp frontend/js/pet.js), luôn vui vẻ ---------- */
   const PET_LOOK = {
@@ -224,5 +293,8 @@
     return 'Rất vui được gặp lại bạn! Làng vẫn luôn ở đây, không có gì thay đổi khi bạn đi vắng.'
   }
 
-  window.Village = { MECHANISMS, BUILDINGS, AVATAR_PARTS, DEFAULT_AVATAR, cleanAvatar, avatarSvg, scene, unlockedOf, nextOf, levelOf, greeting, mechanismFor: code => MECHANISMS[code] || '' }
+  window.Village = { MECHANISMS, BUILDINGS, AVATAR_PARTS, DEFAULT_AVATAR, CHARACTER_PRESETS, cleanAvatar, avatarSvg,
+    // Chỉ phần thân: dùng để đổi nhân vật/thú cưng tại chỗ, không dựng lại cả cảnh làng (nhanh hơn nhiều).
+    heroMarkup: avatar => heroBody(avatar), companionMarkup: species => companionBody(species),
+    scene, unlockedOf, nextOf, levelOf, greeting, mechanismFor: code => MECHANISMS[code] || '' }
 })()
