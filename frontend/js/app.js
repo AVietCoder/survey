@@ -31,7 +31,7 @@ const setButtonLoading=(button,label)=>{
 async function api(method,path,body){
  const r=await fetch('/api'+path,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
  const j=await r.json().catch(()=>({}));
- if(!r.ok){if(r.status==401&&me){me=null;location.hash='#/login'}throw Object.assign(new Error(j.error||'Có lỗi xảy ra'),{status:r.status})}
+ if(!r.ok){if(r.status==401&&me){me=null;location.hash='#/bakhibakhi'}throw Object.assign(new Error(j.error||'Có lỗi xảy ra'),{status:r.status})}
  return j}
 const ic={home:'<path d="M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',research:'<circle cx="8" cy="8" r="4"/><path d="M2 21v-2a6 6 0 0 1 12 0v2M16 3.5a4 4 0 0 1 0 9M18 15a5 5 0 0 1 4 5v1"/>',shield:'<path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3z"/><path d="m9 12 2 2 4-4"/>',
  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
@@ -178,7 +178,7 @@ function shell(r,html){
   const quickSearch=$('#admin-quick-search');
   if(quickSearch)quickSearch.oninput=()=>{const search=$('[data-admin-search]')||$('[data-response-search]');if(search&&search!==quickSearch){search.value=quickSearch.value;search.dispatchEvent(new Event('input',{bubbles:true}))}};
  }
- $('#out').onclick=async()=>{await api('POST','/auth/logout').catch(()=>{});me=null;location.hash='#/login';render()}}
+ $('#out').onclick=async()=>{await api('POST','/auth/logout').catch(()=>{});me=null;location.hash='#/bakhibakhi';render()}}
 const loading=r=>{
  const content=`<div class="page-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="Đang tải nội dung">
   <div class="skeleton-head"><div class="skeleton-block skeleton-title"></div><div class="skeleton-block skeleton-action"></div></div>
@@ -1007,7 +1007,7 @@ async function surveyView(slug,previewId,opts={}){
   if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p>${Tracking.introHtml(trk)}<p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
   else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.bandHtml(S.result?.band)}${Tracking.doneHtml(trk,S)}${previewId?(readOnlyPreview?`<a class="btn" href="#/dashboard">Về tổng quan</a>`:`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`):''}</div>`;
   else{const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
-  bare(`<div class="sv">${UIKit.skipLink('sv-main')}<div class="top"><i style="width:${w}%"></i></div><nav aria-label="Khảo sát">${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':opts.home?'<span class="home-links"><a href="#/track/login">Khu học sinh</a><a href="#/login">Đăng nhập</a></span>':''}</span></nav><section id="sv-main" role="main" tabindex="-1">${inner}</section>${credit}</div>`);
+  bare(`<div class="sv">${UIKit.skipLink('sv-main')}<div class="top"><i style="width:${w}%"></i></div><nav aria-label="Khảo sát">${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':opts.home?'<span class="home-links"><a href="#/track/login">Khu học sinh</a></span>':''}</span></nav><section id="sv-main" role="main" tabindex="-1">${inner}</section>${credit}</div>`);
   Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
   const st=$('#st');if(!st)return;const q=qs[S.i];
   const next=async()=>{const nextButton=$('#nx');if(nextButton.disabled)return;nextButton.disabled=true;const originalLabel=nextButton.textContent;const v=collect(q,st);if(v===undefined&&q.is_required){nextButton.disabled=false;toast('Vui lòng trả lời câu này để tiếp tục');return}
@@ -1261,9 +1261,10 @@ async function analyticsView(id,range={}){
 /* ---------- router ---------- */
 function homeEmpty(){
  app().className='app bare';
- app().innerHTML=`<div class="sv"><nav><span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span><span class="home-links"><a href="#/track/login">Khu học sinh</a><a href="#/login">Đăng nhập</a></span></nav><section><div class="stage"><span class="num">brainst0rm</span><h1>Chưa có khảo sát để hiển thị</h1><p class="hint">Quản trị viên chưa chọn khảo sát mặc định cho trang chủ. Nếu bạn nhận được liên kết khảo sát riêng, hãy mở trực tiếp liên kết đó.</p><div class="foot"><a class="link" href="#/track">Xem tiến triển của tôi</a><a class="btn pri" href="#/login">Đăng nhập</a></div></div></section>${credit}</div>`}
+ app().innerHTML=`<div class="sv"><nav><span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span><span class="home-links"><a href="#/track/login">Khu học sinh</a></span></nav><section><div class="stage"><span class="num">brainst0rm</span><h1>Chưa có khảo sát để hiển thị</h1><p class="hint">Quản trị viên chưa chọn khảo sát mặc định cho trang chủ. Nếu bạn nhận được liên kết khảo sát riêng, hãy mở trực tiếp liên kết đó.</p><div class="foot"><a class="link" href="#/track">Xem tiến triển của tôi</a><a class="btn pri" href="#/track/login">Khu học sinh</a></div></div></section>${credit}</div>`}
 async function render(){
  const [r,arg,detail]=location.hash.replace(/^#\/?/,'').split('/');
+ if(r=='login'){location.replace('#/bakhibakhi');return}
  if(r=='s'&&arg)return surveyView(arg);
  if(r=='track')return Tracking.participantRoute(arg,detail);
  if(!me){try{me=(await api('GET','/auth/me')).user}catch(e){if(e.status!==401){app().className='app bare';app().innerHTML=`<div class="error-state global-error" role="alert"><div class="error-mark" aria-hidden="true">!</div><h2>Không thể kết nối</h2><p>${esc(e.message||'Vui lòng kiểm tra kết nối rồi thử lại.')}</p><button class="btn pri" id="retry">Thử lại</button></div>`;$('#retry').onclick=render;return}}}
