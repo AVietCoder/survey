@@ -1,5 +1,4 @@
 {
-  "0": "Tracking Service Core",
   "1": "Frontend App SPA",
   "3": "Reward Service",
   "4": "Tracking Controller",
@@ -7,7 +6,6 @@
   "8": "Research Projects Controller",
   "14": "Seed Data Script",
   "17": "Rewards Controller",
-  "19": "Score Bands & Templates",
   "20": "Migration Policy & Design Brief",
   "21": "Pet, Accounts & Game Docs",
   "22": "Access & Activity Docs",

@@ -1147,13 +1147,15 @@ const Tracking = (() => {
     const dayHead = Array.from({ length: columns }, (_, i) => `<th scope="col" class="tk-dayno num">${i + 1}</th>`).join('')
     box.innerHTML = `<p class="tk-hint">Mỗi hàng là một nhiệm vụ: cách học sinh trả lời hoặc hoàn thành, nhóm nhận, điểm, khung giờ và các ngày hiển thị. Ngày 1 là ngày học sinh hoàn thành lần đánh giá xác định nhóm của họ. Bạn có thể thêm bao nhiêu nhiệm vụ tùy ý.</p>
       <p class="tk-hint">Khi khảo sát này có ít nhất một nhiệm vụ riêng đang hiện, học sinh chỉ thấy các nhiệm vụ riêng (không lẫn với bộ nhiệm vụ mẫu chung). Nhiệm vụ không bị xóa, chỉ ẩn, để giữ lịch sử điểm. Lựa chọn của học sinh không ảnh hưởng đến điểm và nội dung họ nhập không được lưu.</p>
-      ${canEdit ? `<div class="tk-actions"><button class="btn pri" type="button" id="tk-sched-add">${svg('plus')}Thêm nhiệm vụ</button></div>` : '<p class="tk-hint">Chỉ chủ sở hữu khảo sát mới thêm hoặc sửa được nhiệm vụ.</p>'}
+      ${canEdit ? `<div class="tk-task-styles" role="group" aria-label="Thêm nhiệm vụ theo kiểu"><span class="tk-task-styles-label">Thêm nhanh</span>${(window.TaskStyles || []).map(style => `<button class="btn tk-style-add style-${esc(style.tone)}" type="button" data-sched-add-style="${esc(style.key)}"><span class="tk-style-add-ic" aria-hidden="true">${esc(style.icon)}</span><span><b>${esc(style.label)}</b><small>${esc(style.hint)}</small></span></button>`).join('')}<button class="btn tk-style-add is-custom" type="button" id="tk-sched-add"><span class="tk-style-add-ic" aria-hidden="true">＋</span><span><b>Tùy chỉnh</b><small>Mở đầy đủ biểu mẫu</small></span></button></div>` : '<p class="tk-hint">Chỉ chủ sở hữu khảo sát mới thêm hoặc sửa được nhiệm vụ.</p>'}
       ${tasks.length ? `<div class="tk-sched-wrap" role="region" aria-label="Lịch nhiệm vụ theo ngày" tabindex="0"><table class="tk-sched-table"><caption class="sr-only">Nhiệm vụ của khảo sát xếp theo ngày bắt đầu. Cột ● đánh dấu ngày có nhiệm vụ.</caption>
         <thead><tr><th scope="col" rowspan="2" class="tk-sched-name">Nhiệm vụ</th><th scope="col" rowspan="2">Cách trả lời</th><th scope="col" rowspan="2">Nhóm</th><th scope="col" rowspan="2">Điểm</th><th scope="col" rowspan="2">Khung giờ</th><th scope="col" rowspan="2">Ngày</th>${weekHead}<th scope="col" rowspan="2"><span class="sr-only">Thao tác</span></th></tr><tr>${dayHead}</tr></thead>
         <tbody>${rows}</tbody></table></div>` : emptyState('Khảo sát này chưa có nhiệm vụ riêng', 'Cho đến khi bạn thêm nhiệm vụ, học sinh dùng bộ nhiệm vụ mẫu chung (tạm thời). brainst0rm không tự điền nội dung nhiệm vụ chính thức.')}`
     if (!canEdit) return
     const dialogOpts = { surveyId }
-    $('#tk-sched-add').onclick = async () => { if (await taskDialog(null, dialogOpts)) { toast('Đã thêm nhiệm vụ'); loadSchedule(surveyId) } }
+    const addTask = async completionType => { if (await taskDialog(null, { ...dialogOpts, completionType })) { toast('Đã thêm nhiệm vụ'); loadSchedule(surveyId) } }
+    $$('[data-sched-add-style]', box).forEach(button => button.onclick = () => addTask(button.dataset.schedAddStyle))
+    $('#tk-sched-add').onclick = () => addTask(undefined)
     $$('[data-sched-edit]', box).forEach(button => button.onclick = async () => {
       const task = tasks.find(item => item.id === button.dataset.schedEdit)
       if (task && await taskDialog(task, dialogOpts)) { toast('Đã lưu nhiệm vụ'); loadSchedule(surveyId) }

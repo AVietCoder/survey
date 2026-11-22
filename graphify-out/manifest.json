@@ -150,10 +150,10 @@
     "semantic_hash": "de98d4070f8ed013b5649e5e43456d0c"
   },
   "backend/src/services/surveys.js": {
-    "mtime": 1793788107.2977843,
-    "seen": 1794493003.5224574,
-    "ast_hash": "e860dbae2c086ae101c6682529927fbe",
-    "semantic_hash": "e860dbae2c086ae101c6682529927fbe"
+    "mtime": 1795283092.929649,
+    "seen": 1795320492.5232208,
+    "ast_hash": "53af973828636cbe3c42f9b709b81a48",
+    "semantic_hash": ""
   },
   "backend/src/services/xlsx-export.js": {
     "mtime": 1793887149.5941234,
@@ -192,9 +192,9 @@
     "semantic_hash": "83fdd6af9717f8044e2c37ffc01b1c72"
   },
   "frontend/js/app.js": {
-    "mtime": 1795273421.197034,
-    "seen": 1795275669.5271642,
-    "ast_hash": "df6ff7d9b028ab3e530f6fcca62f4b35",
+    "mtime": 1795283678.1825874,
+    "seen": 1795320492.5238557,
+    "ast_hash": "d69902e0a4a553f6d2a81a84b4669b8a",
     "semantic_hash": ""
   },
   "frontend/js/ui.js": {
@@ -330,9 +330,9 @@
     "semantic_hash": "9d9375869bbd317755598494172895d1"
   },
   "frontend/js/tracking.js": {
-    "mtime": 1795275617.853129,
-    "seen": 1795275669.5272799,
-    "ast_hash": "d1344e9ddc5a92528103e58cff4d7e2f",
+    "mtime": 1795283343.0996134,
+    "seen": 1795320492.5239062,
+    "ast_hash": "67a383f5ec56d0e625395bf88604f4f1",
     "semantic_hash": ""
   },
   "design-spec-cozy-purple.md": {
@@ -582,9 +582,9 @@
     "semantic_hash": ""
   },
   "frontend/js/components.js": {
-    "mtime": 1795252388.4587698,
-    "seen": 1795252563.573929,
-    "ast_hash": "3829f0e413c1e242620258514bf88c69",
+    "mtime": 1795283625.1855917,
+    "seen": 1795320492.523857,
+    "ast_hash": "af1fee964bd31744efd353a285bdaeb7",
     "semantic_hash": ""
   },
   "frontend/robots.txt": {
@@ -609,6 +609,18 @@
     "mtime": 1795281283.5469177,
     "seen": 1795281356.1125138,
     "ast_hash": "6654618382cb8be06137e0f875aa1911",
+    "semantic_hash": ""
+  },
+  "backend/test/survey-question-time-http.test.js": {
+    "mtime": 1795283512.4976003,
+    "seen": 1795320492.5236504,
+    "ast_hash": "65a884d6a716d4c230bcdfa6d4e7b601",
+    "semantic_hash": ""
+  },
+  "backend/test/survey-questions.test.js": {
+    "mtime": 1795283083.3506508,
+    "seen": 1795320492.523652,
+    "ast_hash": "522bf2f869b9303e5a250535675ec3ee",
     "semantic_hash": ""
   },
   "backend/package-lock.json": {

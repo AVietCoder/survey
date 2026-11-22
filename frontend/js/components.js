@@ -44,6 +44,15 @@
    +(error?`<small class="uk-error" id="${errId}" role="alert">${esc(error)}</small>`:'')+`</div>`;
  }
 
+ /* inputField/textareaField — ô nhập dùng chung giữa trình tạo câu hỏi và hộp thoại nhiệm vụ/quà.
+    `attrs` là chuỗi thuộc tính HTML đã tin cậy (do code dựng, không phải dữ liệu người dùng). */
+ function inputField({label='',name='',value='',attrs='',id='',labelClass=''}={}){
+  return `<label${labelClass?` class="${esc(labelClass)}"`:''}>${esc(label)}<input class="in"${name?` name="${esc(name)}"`:''}${id?` id="${esc(id)}"`:''} value="${esc(value??'')}" ${attrs}</label>`
+ }
+ function textareaField({label='',name='',value='',rows=2,maxlength=0,attrs=''}={}){
+  return `<label>${esc(label)}<textarea class="in"${name?` name="${esc(name)}"`:''} rows="${Number(rows)||2}"${maxlength?` maxlength="${Number(maxlength)}"`:''} ${attrs}>${esc(value??'')}</textarea></label>`
+ }
+
  /* emptyState({icon, title, text, action}) — icon là HTML svg; action là HTML nút/liên kết */
  function emptyState({icon='',title='',text='',action='',level=3}={}){
   const h=[1,2,3,4].includes(level)?level:3;
@@ -64,5 +73,5 @@
   if(target){target.focus({preventScroll:false});target.scrollIntoView({block:'start'})}
  });
 
- window.UIKit={esc,attrs,button,card,chip,field,emptyState,skipLink};
+ window.UIKit={esc,attrs,button,card,chip,field,inputField,textareaField,emptyState,skipLink};
 })();

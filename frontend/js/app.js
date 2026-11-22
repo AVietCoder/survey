@@ -54,19 +54,20 @@ const app=()=>$('#app');
 let me=null;
 
 /* ---------- thư viện câu hỏi ---------- */
-const types=[['single','◉','Một lựa chọn','Chọn một đáp án'],['mc','☑','Nhiều lựa chọn','Chọn nhiều đáp án'],['likert','5','Likert','Mức độ đồng ý'],['rating','★','Đánh giá sao','Nhanh, quen thuộc'],['slider','⟷','Thanh trượt','Cảm nhận liên tục'],['rank','≡','Xếp hạng','Sắp thứ tự ưu tiên'],['matrix','▦','Ma trận','Nhiều mục, một thang'],['image','▣','Chọn hình ảnh','Phản ứng trực giác'],['sd','◐','Ngữ nghĩa phân biệt','Hai cực đối lập'],['text','Aa','Văn bản ngắn','Một dòng'],['longtext','¶','Văn bản dài','Tự luận']];
+const types=[['single','◉','Một lựa chọn','Chọn một đáp án'],['mc','☑','Nhiều lựa chọn','Chọn nhiều đáp án'],['likert','5','Likert','Mức độ đồng ý'],['rating','★','Đánh giá sao','Nhanh, quen thuộc'],['slider','⟷','Thanh trượt','Cảm nhận liên tục'],['rank','≡','Xếp hạng','Sắp thứ tự ưu tiên'],['matrix','▦','Ma trận','Nhiều mục, một thang'],['image','▣','Chọn hình ảnh','Tải ảnh cho từng lựa chọn'],['sd','◐','Ngữ nghĩa phân biệt','Hai cực đối lập'],['text','Aa','Văn bản ngắn','Một dòng'],['longtext','¶','Văn bản dài','Tự luận'],['time','◷','Giờ trong ngày','Chọn giờ và phút']];
 const TN=Object.fromEntries(types.map(t=>[t[0],t[2]]));
 const L=a=>a.map(label=>({label,value:label}));
 const hasOpts=t=>['single','mc','rank','image','matrix'].includes(t);
 let nid=0;
 function mk(t){
- const text={single:'Bạn làm việc hiệu quả nhất vào lúc nào?',mc:'Bạn thường dùng những công cụ nào?',likert:'Tôi hài lòng với công việc hiện tại.',rating:'Bạn đánh giá buổi họp hôm nay thế nào?',slider:'Mức căng thẳng của bạn hôm nay?',rank:'Xếp hạng các yếu tố sau.',matrix:'Trong tuần qua, bạn cảm thấy…',image:'Khung cảnh nào giúp bạn tập trung nhất?',sd:'Văn hóa nhóm của bạn như thế nào?',text:'Bạn làm ở bộ phận nào?',longtext:'Điều gì sẽ cải thiện ngày làm việc của bạn?'}[t];
+ const text={single:'Bạn làm việc hiệu quả nhất vào lúc nào?',mc:'Bạn thường dùng những công cụ nào?',likert:'Tôi hài lòng với công việc hiện tại.',rating:'Bạn đánh giá buổi họp hôm nay thế nào?',slider:'Mức căng thẳng của bạn hôm nay?',rank:'Xếp hạng các yếu tố sau.',matrix:'Trong tuần qua, bạn cảm thấy…',image:'Khung cảnh nào giúp bạn tập trung nhất?',sd:'Văn hóa nhóm của bạn như thế nào?',text:'Bạn làm ở bộ phận nào?',longtext:'Điều gì sẽ cải thiện ngày làm việc của bạn?',time:'Bạn thường đi ngủ lúc mấy giờ?'}[t];
  const o={single:['Buổi sáng sớm','Giữa buổi sáng','Chiều muộn','Ban đêm'],mc:['Email','Chat','Họp video'],rank:['Tự do sắp xếp thời gian','Đồng nghiệp tốt','Mục đích rõ ràng','Thu nhập ổn định'],image:['Rừng sớm','Phố đêm','Bãi biển'],matrix:['Tập trung','Mệt mỏi','Hứng thú']}[t]||[];
- const s={likert:{lo:'Hoàn toàn không đồng ý',hi:'Hoàn toàn đồng ý'},slider:{lo:'Hoàn toàn bình tĩnh',hi:'Rất căng thẳng'},matrix:{cols:['Hiếm','Đôi khi','Thường']},sd:{pairs:[['Yên tĩnh','Ồn ào'],['Linh hoạt','Cứng nhắc'],['Gắn kết','Cô lập']]}}[t]||{};
+ const s={likert:{lo:'Hoàn toàn không đồng ý',hi:'Hoàn toàn đồng ý'},slider:{lo:'Hoàn toàn bình tĩnh',hi:'Rất căng thẳng'},matrix:{cols:['Hiếm','Đôi khi','Thường']},sd:{pairs:[['Yên tĩnh','Ồn ào'],['Linh hoạt','Cứng nhắc'],['Gắn kết','Cô lập']]},time:{placeholder:'23:30'}}[t]||{};
  return{id:'new-'+(++nid),question_text:text,question_type:t,is_required:true,settings:s,options:L(o)}}
 
 /* ---------- thân câu hỏi dùng chung (Builder, Preview, Survey) ---------- */
 const col=["#D4D0FA","#B7B1F4","#FFE3A3","#FFD166","#C9F0DA","#9AD9B3"];
+const imgSrc=value=>typeof value=='string'&&/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';
 function body(q){
  const t=q.question_type,s=q.settings||{},o=q.options||[],v=x=>esc(x);
  if(t=='single'||t=='mc')return o.map(x=>`<button class="opt ${t=='mc'?'multi':''}" data-v="${v(x.label)}"><i></i>${v(x.label)}</button>`).join('');
@@ -75,29 +76,52 @@ function body(q){
  if(t=='slider')return `<input type="range" min="1" max="100" value="50"><div class="ends"><span>${v(s.lo||'')}</span><span>${v(s.hi||'')}</span></div>`;
  if(t=='rank')return o.map(x=>`<button class="rank" data-v="${v(x.label)}"><b></b>${v(x.label)}</button>`).join('')+'<div class="ends"><span>Chạm theo thứ tự ưu tiên</span></div>';
  if(t=='matrix'){const c=s.cols||[];return `<table class="mx"><tr><th></th>${c.map(h=>`<th>${v(h)}</th>`).join('')}</tr>${o.map(r=>`<tr><td>${v(r.label)}</td>${c.map(h=>`<td><input type="radio" name="${v(q.id)}__${v(r.label)}" value="${v(h)}"></td>`).join('')}</tr>`).join('')}</table>`}
- if(t=='image')return `<div class="imgs">${o.map((x,i)=>`<button class="img" data-v="${v(x.label)}"><div style="background:linear-gradient(135deg,${col[i*2%6]},${col[(i*2+1)%6]})"></div><span>${v(x.label)}</span></button>`).join('')}</div>`;
+ if(t=='image')return `<div class="imgs">${o.map((x,i)=>{const src=imgSrc((s.images||[])[i]);const art=src?`background-image:url('${v(src)}');background-size:cover;background-position:center`:`background:linear-gradient(135deg,${col[i*2%6]},${col[(i*2+1)%6]})`;return `<button class="img" data-v="${v(x.label)}"><div style="${art}"></div><span>${v(x.label)}</span></button>`}).join('')}</div>`;
  if(t=='sd')return (s.pairs||[]).map(p=>`<div class="sd" data-k="${v(p.join('|'))}"><span>${v(p[0])}</span><div class="dots">${[1,2,3,4,5].map(n=>`<button data-v="${n}" aria-label="${n}"></button>`).join('')}</div><span>${v(p[1])}</span></div>`).join('');
- if(t=='longtext')return `<textarea placeholder="Chia sẻ bằng lời của bạn…"></textarea>`;
+ if(t=='longtext')return `<textarea placeholder="${v(s.placeholder||'Chia sẻ bằng lời của bạn…')}"></textarea>`;
  if(isTimeQuestion(q))return timePicker(q);
  return `<input class="in" type="text" placeholder="${v(s.placeholder||'Câu trả lời của bạn')}" maxlength="300">`}
-const isTimeQuestion=q=>q.question_type=='text'&&(q.settings?.input=='time'||/(^|_)(bedtime|waketime)$/.test(q.settings?.key||''));
-const TIME_PRESETS={bed:['21:30','22:00','23:00','00:00'],wake:['05:30','06:00','06:30','07:00']};
+const isTimeQuestion=q=>q.question_type=='time'||(q.question_type=='text'&&(q.settings?.input=='time'||/(^|_)(bedtime|waketime)$/.test(q.settings?.key||'')));
+const normClock=t=>{t=String(t||'').trim();const a=t.match(/^(\d{1,2})(?:[:h.](\d{1,2}))?$/);if(!a)return t;const hh=+a[1],mm=a[2]===undefined?0:+a[2];return hh>23||mm>59?t:String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')};
+const TIME_PRESETS={bed:['21:30','22:00','23:00','00:00'],wake:['05:30','06:00','06:30','07:00'],day:['08:00','12:00','18:00','21:00']};
 function timePicker(q){
- const wake=/waketime$/.test(q.settings?.key||''),pad=n=>String(n).padStart(2,'0'),presets=TIME_PRESETS[wake?'wake':'bed'];
+ const key=q.settings?.key||'',wake=/waketime$/.test(key),generic=q.question_type=='time'&&!/(bedtime|waketime)$/.test(key),pad=n=>String(n).padStart(2,'0'),presets=TIME_PRESETS[generic?'day':wake?'wake':'bed'];
  return `<div class="tpick"><input class="in tpick-val" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${esc(q.settings?.placeholder||'23:30')}" aria-label="Giờ và phút, dạng 23:30">
   <div class="tpick-row" role="group" aria-label="Chọn giờ và phút"><select class="sel" data-h aria-label="Giờ"><option value="">Giờ</option>${Array.from({length:24},(_,h)=>`<option value="${pad(h)}">${pad(h)}</option>`).join('')}</select><b aria-hidden="true">:</b><select class="sel" data-m aria-label="Phút"><option value="">Phút</option>${Array.from({length:12},(_,i)=>`<option value="${pad(i*5)}">${pad(i*5)}</option>`).join('')}</select></div>
   <div class="tpick-quick" role="group" aria-label="Gợi ý nhanh"><button type="button" class="chip-btn chip-now" data-now>Bây giờ</button>${presets.map(p=>`<button type="button" class="chip-btn" data-set="${p}">${p}</button>`).join('')}</div></div>`}
 function wireTime(root){
  $$('.tpick',root).forEach(box=>{
   const val=$('.tpick-val',box),h=$('[data-h]',box),m=$('[data-m]',box);
-  const norm=t=>{t=String(t||'').trim();const a=t.match(/^(\d{1,2})(?:[:h.](\d{1,2}))?$/);if(!a)return t;const hh=+a[1],mm=a[2]===undefined?0:+a[2];return hh>23||mm>59?t:String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')};
   const sync=()=>{const p=/^(\d{2}):(\d{2})$/.exec(val.value);h.value=p?p[1]:'';m.value=p&&[...m.options].some(o=>o.value==p[2])?p[2]:''};
   const put=t=>{val.value=t;sync()};
   h.onchange=()=>put(h.value?h.value+':'+(m.value||'00'):'');
   m.onchange=()=>put(h.value?h.value+':'+m.value:'');
-  val.oninput=sync;val.onblur=()=>{if(val.value){val.value=norm(val.value);sync()}};
+  val.oninput=sync;val.onblur=()=>{if(val.value){val.value=normClock(val.value);sync()}};
   $('[data-now]',box).onclick=()=>{const d=new Date();put(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))};
   $$('[data-set]',box).forEach(b=>b.onclick=()=>put(b.dataset.set))})}
+/* Ảnh lựa chọn: thu nhỏ ngay trên trình duyệt để không gửi ảnh gốc lên máy chủ. */
+function compressImage(file){
+ return new Promise((resolve,reject)=>{
+  if(!/^image\/(?:png|jpe?g|webp|gif)$/.test(file.type||''))return reject(new Error('Chỉ nhận ảnh PNG, JPEG, WebP hoặc GIF'))
+  if(file.size>8*1024*1024)return reject(new Error('Ảnh quá lớn (tối đa 8 MB trước khi nén)'))
+  const url=URL.createObjectURL(file),image=new Image();
+  image.onload=()=>{
+   try{
+    const max=720,scale=Math.min(1,max/Math.max(image.naturalWidth||1,image.naturalHeight||1));
+    const width=Math.max(1,Math.round((image.naturalWidth||1)*scale)),height=Math.max(1,Math.round((image.naturalHeight||1)*scale));
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const context=canvas.getContext('2d');if(!context)throw new Error('Trình duyệt không hỗ trợ xử lý ảnh');
+    context.fillStyle='#fff';context.fillRect(0,0,width,height);context.drawImage(image,0,0,width,height);
+    let data=canvas.toDataURL('image/webp',.78);
+    if(data.length>120_000)data=canvas.toDataURL('image/jpeg',.68);
+    if(data.length>180_000)throw new Error('Ảnh vẫn quá lớn sau khi nén; hãy chọn ảnh nhỏ hơn');
+    resolve(data)
+   }catch(error){reject(error)}finally{URL.revokeObjectURL(url)}
+  };
+  image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Không đọc được tệp ảnh'))};
+  image.src=url
+ })
+}
 function wire(root,onPick){
  const setPressed=(b,on)=>b.setAttribute('aria-pressed',String(on));
  $$('.scale button,.stars button,.dots button,.opt,.img,.rank',root).forEach(b=>setPressed(b,b.classList.contains('on')));
@@ -118,7 +142,8 @@ function collect(q,root){
  if(t=='rank'){const a=$$('.rank.on',root).sort((x,y)=>+$('b',x).textContent-+$('b',y).textContent).map(b=>b.dataset.v);return a.length==q.options.length?a:undefined}
  if(t=='matrix'){const o={};$$('input:checked',root).forEach(i=>o[i.name.slice(String(q.id).length+2)]=i.value);return Object.keys(o).length==q.options.length?o:undefined}
  if(t=='sd'){const o={};$$('.sd',root).forEach(r=>{const b=$('.dots .on',r);if(b)o[r.dataset.k]=+b.dataset.v});return Object.keys(o).length==(q.settings.pairs||[]).length?o:undefined}
- return $('textarea,input[type=text]',root).value.trim()||undefined}
+ if(isTimeQuestion(q)){const el=$('.tpick-val',root);return el?normClock(el.value)||undefined:undefined}
+ return $('textarea,input[type=text]',root)?.value.trim()||undefined}
 
 /* ---------- khung chung ---------- */
 const nav=[['dashboard','Tổng quan','home'],['builder','Trình tạo','edit'],['analytics','Phân tích','chart'],['research','Nghiên cứu','research']];
@@ -522,55 +547,101 @@ const TIER_LABEL={green:'Xanh',yellow:'Vàng',red:'Đỏ'},TYPE_LABEL={self_repo
 const REWARD_ITEM_KINDS={title:'Danh hiệu',badge:'Huy hiệu',sticker:'Sticker',theme:'Giao diện',pet_item:'Đồ trang trí thú cưng'};
 const REWARD_ITEM_ASSETS=['star','leaf','moon','heart','sun'];
 const GAME_LABEL={breathing:'Vòng thở nhẹ',rest_timer:'Đồng hồ nghỉ',three_plans:'Lập ba việc ngày mai'};
+/* Bốn kiểu nhiệm vụ có cách học sinh xác nhận khác nhau. Dùng chung cho hộp thoại thêm nhiệm vụ
+   và dải nút thêm nhanh ở phần lịch nhiệm vụ của khảo sát (tracking.js đọc qua window.TaskStyles). */
+const TASK_STYLES=[
+ {key:'self_report',icon:'✓',label:'Tự xác nhận',hint:'Một nút “Mình đã làm”',tone:'mint'},
+ {key:'timer',icon:'⏱',label:'Đếm giờ',hint:'Máy chủ đếm thời gian tối thiểu',tone:'sky'},
+ {key:'count_chars',icon:'✎',label:'Viết ngắn',hint:'Chỉ đếm ký tự, không lưu nội dung',tone:'pink'},
+ {key:'choice',icon:'◉',label:'Chọn hành động',hint:'Học sinh chọn một loại hành động',tone:'amber'}
+];
+window.TaskStyles=TASK_STYLES;
+const TASK_STYLE_LABEL=Object.fromEntries(TASK_STYLES.map(style=>[style.key,style.label]));
 function taskDialog(task,opts={}){
  return new Promise(resolve=>{
   const sid=opts.surveyId||null;
   const t=task||{audience:['yellow'],completion_type:'self_report',points:10,times_per_day:1,is_active:true,is_placeholder:true,sort_order:0,game:null};
+  const completion=TASK_STYLES.some(style=>style.key===(task?task.completion_type:opts.completionType))?(task?task.completion_type:opts.completionType):'self_report';
   const dialog=document.createElement('dialog');dialog.className='confirm-dialog admin-edit-dialog task-dialog';
-  const field=(label,name,value,attrs='')=>`<label>${label}<input class="in" name="${name}" value="${esc(value??'')}" ${attrs}></label>`;
-  dialog.innerHTML=`<form class="dialog-content" method="dialog" id="task-form" novalidate><span class="chip c-run">${task?'Sửa nhiệm vụ':'Nhiệm vụ mới'}</span><h2>${task?esc(sid?task.name:task.code):'Thêm nhiệm vụ'}</h2>
-   <div class="task-grid">${sid?'':field('Mã nhiệm vụ','code',t.code,`maxlength="24" required ${task?'readonly':''}`)}${field('Tên nhiệm vụ','name',t.name,'maxlength="80" required')}</div>
-   <label>Mô tả<textarea class="in" name="description" rows="2" maxlength="400">${esc(t.description||'')}</textarea></label>
-   <label>Hướng dẫn thực hiện<textarea class="in" name="instructions" rows="2" maxlength="800">${esc(t.instructions||'')}</textarea></label>
-   <fieldset class="task-tiers"><legend>Nhóm áp dụng</legend>${['green','yellow','red'].map(tier=>`<label class="tk-check"><input type="checkbox" name="audience" value="${tier}" ${t.audience.includes(tier)?'checked':''}><span>${TIER_LABEL[tier]}</span></label>`).join('')}</fieldset>
-   <div class="task-grid">${field('Điểm thưởng','points',t.points,'type="number" min="0" max="50" required')}${field('Số lần mỗi ngày','times_per_day',t.times_per_day,'type="number" min="1" max="5" required')}</div>
-    <div class="task-grid"><label>Cách xác minh<select class="sel" name="completion_type">${Object.entries(TYPE_LABEL).map(([k,v])=>`<option value="${k}" ${t.completion_type==k?'selected':''}>${v}</option>`).join('')}</select></label>${field('Thời gian tối thiểu (giây, cho đếm giờ)','min_seconds',t.min_seconds,'type="number" min="1" max="7200"')}</div>
-    <label>Mini-game gắn với nhiệm vụ<select class="sel" name="game"><option value="">Không dùng mini-game</option>${Object.entries(GAME_LABEL).map(([key,label])=>`<option value="${key}" ${t.game===key?'selected':''}>${label}</option>`).join('')}</select><small class="admin-panel-hint">Mini-game chỉ dùng được với cách xác minh phù hợp; thời gian vẫn được máy chủ kiểm tra.</small></label>
-   <div class="task-grid">${field('Số ký tự tối thiểu (cho đếm ký tự)','min_count',t.min_count,'type="number" min="1" max="2000"')}${field('Các lựa chọn (cách nhau bằng dấu |)','choices',(t.choices||[]).join(' | '),'maxlength="240"')}</div>
-   ${sid?`<fieldset class="task-days"><legend>Lịch theo ngày</legend><div class="task-grid">${field('Từ ngày thứ','start_day',t.start_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="1"')}${field('Đến ngày thứ','end_day',t.end_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="Để trống = đến hết"')}</div>
-    <p class="tk-hint">Ngày 1 là ngày học sinh hoàn thành lần đánh giá xác định nhóm của mình (giờ Việt Nam). Để trống cả hai ô nếu nhiệm vụ mở mọi ngày.</p>${field('Thứ tự khi cùng ngày bắt đầu','sort_order',t.sort_order??0,'type="number" min="-1000" max="1000" inputmode="numeric"')}</fieldset>`:''}
-   <div class="task-grid">${field('Làm được từ giờ (HH:MM)','window_start',t.window_start,'placeholder="11:00" maxlength="5"')}${field('Đến giờ (HH:MM)','window_end',t.window_end,'placeholder="14:00" maxlength="5"')}</div>
-   <div class="task-grid">${field('Thời gian thực hiện (phút)','duration_minutes',t.duration_minutes,'type="number" min="1" max="240"')}${field('Mô tả cách xác minh','verification',t.verification,'maxlength="200"')}</div>
-   <label class="tk-check"><input type="checkbox" name="is_placeholder" ${t.is_placeholder?'checked':''}><span>Đây là dữ liệu <b>tạm thời</b> (bỏ chọn khi nội dung đã được duyệt chính thức)</span></label>
-   <label class="tk-check"><input type="checkbox" name="is_active" ${t.is_active?'checked':''}><span>Đang hiển thị cho học sinh</span></label>
+  const field=(label,name,value,attrs='')=>UIKit.inputField({label,name,value,attrs});
+  dialog.innerHTML=`<form class="dialog-content task-form" method="dialog" id="task-form" novalidate>
+   <div class="task-dialog-head"><span class="chip c-run">${task?'Sửa nhiệm vụ':'Nhiệm vụ mới'}</span><h2>${task?esc(sid?task.name:task.code):'Thêm nhiệm vụ'}</h2><p class="task-dialog-lead">Chọn kiểu nhiệm vụ, rồi điền phần còn lại. Học sinh chỉ thấy hướng dẫn ngắn gọn và một hành động rõ ràng.</p></div>
+   <fieldset class="task-styles"><legend>Kiểu nhiệm vụ</legend><div class="task-style-grid">${TASK_STYLES.map(style=>`<button type="button" class="task-style style-${style.tone}" data-style="${style.key}" aria-pressed="${completion===style.key}"><span class="task-style-ic" aria-hidden="true">${style.icon}</span><span><b>${style.label}</b><small>${style.hint}</small></span></button>`).join('')}</div><input type="hidden" name="completion_type" value="${completion}"></fieldset>
+   <div class="task-dialog-body"><div class="task-form-main">
+    <div class="task-grid">${sid?'':field('Mã nhiệm vụ','code',t.code,`maxlength="24" required ${task?'readonly':''}`)}${field('Tên nhiệm vụ','name',t.name,'maxlength="80" required')}</div>
+    ${UIKit.textareaField({label:'Mô tả',name:'description',value:t.description||'',rows:2,maxlength:400})}
+    ${UIKit.textareaField({label:'Hướng dẫn thực hiện',name:'instructions',value:t.instructions||'',rows:2,maxlength:800})}
+    <fieldset class="task-tiers"><legend>Nhóm áp dụng</legend>${['green','yellow','red'].map(tier=>`<label class="tk-check"><input type="checkbox" name="audience" value="${tier}" ${(t.audience||[]).includes(tier)?'checked':''}><span>${TIER_LABEL[tier]}</span></label>`).join('')}</fieldset>
+    <div class="task-grid">${field('Điểm thưởng','points',t.points,'type="number" min="0" max="50" required')}${field('Số lần mỗi ngày','times_per_day',t.times_per_day,'type="number" min="1" max="5" required')}</div>
+    <div class="task-style-fields" data-style-field="timer">${field('Thời gian tối thiểu (giây)','min_seconds',t.min_seconds,'type="number" min="1" max="7200"')}</div>
+    <div class="task-style-fields" data-style-field="count_chars">${field('Số ký tự tối thiểu','min_count',t.min_count,'type="number" min="1" max="2000"')}</div>
+    <div class="task-style-fields" data-style-field="choice"><label>Các lựa chọn (cách nhau bằng dấu |)<input class="in" name="choices" value="${esc((t.choices||[]).join(' | '))}" maxlength="240"></label><p class="tk-hint">Học sinh chọn một loại hành động. Lựa chọn không ảnh hưởng đến điểm và không lưu nội dung tự do.</p></div>
+    <label class="task-game-field" data-game-field>Mini-game gắn với nhiệm vụ<select class="sel" name="game"><option value="">Không dùng mini-game</option>${Object.entries(GAME_LABEL).map(([key,label])=>`<option value="${key}" ${t.game===key?'selected':''}>${label}</option>`).join('')}</select><small class="admin-panel-hint">Chỉ dùng được với kiểu Đếm giờ hoặc Viết ngắn; thời gian vẫn được máy chủ kiểm tra.</small></label>
+    ${sid?`<fieldset class="task-days"><legend>Lịch theo ngày</legend><div class="task-grid">${field('Từ ngày thứ','start_day',t.start_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="1"')}${field('Đến ngày thứ','end_day',t.end_day,'type="number" min="1" max="365" inputmode="numeric" placeholder="Để trống = đến hết"')}</div>
+     <p class="tk-hint">Ngày 1 là ngày học sinh hoàn thành lần đánh giá xác định nhóm của mình (giờ Việt Nam). Để trống cả hai ô nếu nhiệm vụ mở mọi ngày.</p>${field('Thứ tự khi cùng ngày bắt đầu','sort_order',t.sort_order??0,'type="number" min="-1000" max="1000" inputmode="numeric"')}</fieldset>`:''}
+    <details class="task-advanced"><summary>Khung giờ, thời lượng và cách xác minh</summary><div class="task-grid">${field('Làm được từ giờ (HH:MM)','window_start',t.window_start,'placeholder="11:00" maxlength="5"')}${field('Đến giờ (HH:MM)','window_end',t.window_end,'placeholder="14:00" maxlength="5"')}</div>
+     <div class="task-grid">${field('Thời gian thực hiện (phút)','duration_minutes',t.duration_minutes,'type="number" min="1" max="240"')}${field('Mô tả cách xác minh','verification',t.verification,'maxlength="200"')}</div></details>
+    <label class="tk-check"><input type="checkbox" name="is_placeholder" ${t.is_placeholder?'checked':''}><span>Đây là dữ liệu <b>tạm thời</b> (bỏ chọn khi nội dung đã được duyệt chính thức)</span></label>
+    <label class="tk-check"><input type="checkbox" name="is_active" ${t.is_active?'checked':''}><span>Đang hiển thị cho học sinh</span></label>
+   </div><aside class="task-preview-wrap"><span class="task-preview-label">Học sinh sẽ thấy</span><div class="task-preview" id="task-preview" aria-live="polite"></div><p class="tk-hint">Bản xem trước chỉ minh họa. Điểm thực tế vẫn theo trần chung và cấu hình điểm.</p></aside></div>
    <p class="err" id="task-error" role="alert"></p>
    <div class="dialog-actions"><button class="btn" type="button" data-task-cancel>Hủy</button><button class="btn pri" type="submit">Lưu nhiệm vụ</button></div></form>`;
   let done=false;const finish=v=>{if(done)return;done=true;if(dialog.open)dialog.close();dialog.remove();resolve(v)};
   $('[data-task-cancel]',dialog).onclick=()=>finish(null);dialog.addEventListener('cancel',e=>{e.preventDefault();finish(null)});
-  $('#task-form',dialog).addEventListener('submit',async e=>{
-   e.preventDefault();const f=e.currentTarget,num=n=>f[n].value===''?null:Number(f[n].value);
-   const body={...(sid?{}:{code:f.code.value.trim()}),name:f.name.value,description:f.description.value,instructions:f.instructions.value,audience:$$('[name=audience]:checked',f).map(b=>b.value),
-    points:num('points'),times_per_day:num('times_per_day'),completion_type:f.completion_type.value,min_seconds:num('min_seconds'),min_count:num('min_count'),
-    choices:f.choices.value.split('|').map(s=>s.trim()).filter(Boolean),window_start:f.window_start.value.trim()||null,window_end:f.window_end.value.trim()||null,
-     duration_minutes:num('duration_minutes'),verification:f.verification.value,game:$('select[name=game]',f).value||null,is_placeholder:f.is_placeholder.checked,is_active:f.is_active.checked,...(sid?{start_day:num('start_day'),end_day:num('end_day'),sort_order:num('sort_order')??0}:{})};
-   const restore=setButtonLoading($('button[type=submit]',f),'Đang lưu…');
+  const form=$('#task-form',dialog),valueOf=name=>form.elements.namedItem(name)?.value??'',checked=name=>Boolean(form.elements.namedItem(name)?.checked);
+  const styleButtons=$$('[data-style]',dialog),completionInput=$('[name=completion_type]',dialog),styleFields=$$('[data-style-field]',dialog),gameField=$('[data-game-field]',dialog),gameSelect=$('select[name=game]',dialog),preview=$('#task-preview',dialog);
+  const updatePreview=()=>{
+   const name=valueOf('name').trim()||'Tên nhiệm vụ',points=valueOf('points')||'0',description=valueOf('description').trim(),style=completionInput.value;
+   let action;
+   if(style==='timer'){
+    const seconds=Math.max(1,Number(valueOf('min_seconds'))||60);
+    action=`<div class="task-preview-timer"><span class="task-preview-clock">0:00</span><span class="btn pri" aria-hidden="true">Bắt đầu (${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')})</span></div>`
+   }else if(style==='count_chars'){
+    const minimum=Math.max(1,Number(valueOf('min_count'))||1);
+    action=`<label class="tk-lbl">Ghi vào đây (chỉ đếm số ký tự, nội dung không được gửi đi)</label><div class="task-preview-textarea" aria-hidden="true"></div><p class="tk-hint">0 / ${minimum} ký tự</p><span class="btn pri" aria-hidden="true">Xong</span>`
+   }else if(style==='choice'){
+    const choices=valueOf('choices').split('|').map(choice=>choice.trim()).filter(Boolean).slice(0,4);
+    action=`<div class="task-preview-choices">${choices.length?choices.map((choice,index)=>`<span class="tk-check"><input type="radio" disabled ${index===0?'checked':''}><span>${esc(choice)}</span></span>`).join(''):'<span class="tk-hint">Thêm lựa chọn ở biểu mẫu bên trái.</span>'}</div><span class="btn pri" aria-hidden="true">Xong</span>`
+   }else action='<span class="btn pri" aria-hidden="true">Mình đã làm</span>';
+   const label=$('.task-preview-label',dialog);if(label)label.textContent=`Học sinh sẽ thấy · ${TASK_STYLE_LABEL[style]||''}`;
+   preview.innerHTML=`<article class="tk-card tk-task task-preview-card"><div class="tk-task-head"><h2>${esc(name)}</h2><span class="chip c-run">+${esc(points)} ⭐</span></div>${description?`<p>${esc(description)}</p>`:''}<div class="tk-task-action">${action}</div></article>`
+  };
+  const syncStyle=()=>{
+   const style=completionInput.value,allowed=style==='timer'?['breathing','rest_timer']:style==='count_chars'?['three_plans']:[];
+   styleButtons.forEach(button=>{const on=button.dataset.style===style;button.classList.toggle('on',on);button.setAttribute('aria-pressed',String(on))});
+   styleFields.forEach(field=>{field.hidden=field.dataset.styleField!==style});
+   if(gameField)gameField.hidden=!allowed.length;
+   $$('option[value]',gameSelect).forEach(option=>{if(option.value)option.disabled=!allowed.includes(option.value)});
+   if(gameSelect.value&&!allowed.includes(gameSelect.value))gameSelect.value='';
+   updatePreview()
+  };
+  styleButtons.forEach(button=>button.onclick=()=>{completionInput.value=button.dataset.style;syncStyle()});
+  form.addEventListener('input',updatePreview);form.addEventListener('change',updatePreview);
+  form.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const num=name=>{const value=valueOf(name).trim();return value===''?null:Number(value)};
+   const body={...(sid?{}:{code:valueOf('code').trim()}),name:valueOf('name').trim(),description:valueOf('description'),instructions:valueOf('instructions'),audience:$$('[name=audience]:checked',form).map(box=>box.value),
+    points:num('points'),times_per_day:num('times_per_day'),completion_type:completionInput.value,min_seconds:num('min_seconds'),min_count:num('min_count'),
+    choices:valueOf('choices').split('|').map(choice=>choice.trim()).filter(Boolean),window_start:valueOf('window_start').trim()||null,window_end:valueOf('window_end').trim()||null,
+    duration_minutes:num('duration_minutes'),verification:valueOf('verification'),game:gameSelect.value||null,is_placeholder:checked('is_placeholder'),is_active:checked('is_active'),...(sid?{start_day:num('start_day'),end_day:num('end_day'),sort_order:num('sort_order')??0}:{})};
+   if(!body.name){$('#task-error',form).textContent='Nhập tên nhiệm vụ';return}
+   if(!body.audience.length){$('#task-error',form).textContent='Chọn ít nhất một nhóm áp dụng';return}
+   const restore=setButtonLoading($('button[type=submit]',form),'Đang lưu…');
    try{const base=sid?`/tracking/surveys/${encodeURIComponent(sid)}/tasks`:'/admin/rewards/tasks';const r=task?await api('PUT',base+'/'+task.id,body):await api('POST',base,body);finish(r.task)}
-   catch(error){restore();$('#task-error',f).textContent=error.message}});
-  const completionSelect=$('select[name=completion_type]',dialog),gameSelect=$('select[name=game]',dialog);
-  const syncGameOptions=()=>{const allowed=completionSelect.value==='timer'?['breathing','rest_timer']:completionSelect.value==='count_chars'?['three_plans']:[];$$('option[value]',gameSelect).forEach(option=>{if(option.value)option.disabled=!allowed.includes(option.value)});if(gameSelect.value&&!allowed.includes(gameSelect.value))gameSelect.value=''};
-  completionSelect.onchange=syncGameOptions;syncGameOptions();
+   catch(error){restore();$('#task-error',form).textContent=error.message}});
+  syncStyle();
   document.body.append(dialog);dialog.showModal();$('input[name=name]',dialog).focus()})
 }
 function rewardItemDialog(item){
  return new Promise(resolve=>{
   const value=item||{kind:'badge',asset_key:'star',unlock_stars:0,is_placeholder:true,is_active:true,sort_order:0}
   const dialog=document.createElement('dialog');dialog.className='confirm-dialog admin-edit-dialog task-dialog'
-  const field=(label,name,current,attrs='')=>`<label>${label}<input class="in" name="${name}" value="${esc(current??'')}" ${attrs}></label>`
+  const field=(label,name,current,attrs='')=>UIKit.inputField({label,name,value:current,attrs})
   dialog.innerHTML=`<form class="dialog-content" method="dialog" id="reward-item-form" novalidate><span class="chip c-run">${item?'Sửa vật phẩm':'Vật phẩm mới'}</span><h2>${item?esc(item.code):'Thêm vào kho đồ'}</h2>
    ${field('Mã vật phẩm','code',value.code,`maxlength="32" pattern="[a-z0-9][a-z0-9_-]{1,31}" required ${item?'readonly':''}`)}
    <label>Loại vật phẩm<select class="sel" name="kind" ${item?'disabled':''}>${Object.entries(REWARD_ITEM_KINDS).map(([key,label])=>`<option value="${key}" ${key===value.kind?'selected':''}>${label}</option>`).join('')}</select></label>
    ${field('Tên hiển thị','name',value.name,'maxlength="80" required')}
-   <label>Mô tả<textarea class="in" name="description" rows="2" maxlength="300">${esc(value.description||'')}</textarea></label>
+   ${UIKit.textareaField({label:'Mô tả',name:'description',value:value.description||'',rows:2,maxlength:300})}
    <div class="task-grid">${field('Sao tích lũy để mở khóa','unlock_stars',value.unlock_stars,'type="number" min="0" max="1000000" required')}
     <label>SVG có sẵn<select class="sel" name="asset_key">${REWARD_ITEM_ASSETS.map(key=>`<option value="${key}" ${key===value.asset_key?'selected':''}>${key}</option>`).join('')}</select></label></div>
    ${field('Thứ tự hiển thị','sort_order',value.sort_order,'type="number" min="-1000" max="1000" required')}
@@ -814,15 +885,21 @@ function builderRender(){
  ${cur.owner?`<small class="admin-panel-hint">Khảo sát của ${esc(cur.owner)} · quyền chỉnh sửa tạm thời</small>`:''}${cur.status=='published'?`<div class="linkbox"><span>${esc(pubLink())}</span><button id="cp">Sao chép</button></div>`:''}</div>
  <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="seg"><button data-m="edit" class="${mode=='edit'?'on':''}">Chỉnh sửa</button><button data-m="prev" class="${mode=='prev'?'on':''}">Xem trước</button></div>
  <a class="btn" href="#/tracking/${cur.id}">${svg('trend')}Theo dõi</a>${cur.canDelete?`<button class="btn text-danger" id="del">${svg('trash')}Xóa</button>`:''}<button class="btn pri" id="pub">${cur.status=='published'?'Hủy xuất bản':`${svg('send')}Xuất bản`}</button></div></div>
- <div class="bld"><div class="lib"><h3>Thư viện câu hỏi</h3><p class="lib-hint">Bấm để thêm vào cuối khảo sát</p>${typeGroups.map(([group,ids])=>`<span class="lib-group">${group}</span>${ids.map(id=>types.find(t=>t[0]==id)).map(t=>`<button type="button" data-add="${t[0]}"><em aria-hidden="true">${t[1]}</em><span>${t[2]}<small>${t[3]}</small></span></button>`).join('')}`).join('')}</div><div id="cv"></div><div class="card" id="pp"></div></div>`);
+ <div class="bld"><div class="lib"><h3>Thư viện câu hỏi</h3><p class="lib-hint">Bấm để thêm vào cuối khảo sát</p><label class="lib-search"><span aria-hidden="true">⌕</span><input type="search" id="lib-search" placeholder="Tìm dạng câu hỏi…" aria-label="Tìm dạng câu hỏi"></label>${typeGroups.map(([group,ids])=>`<span class="lib-group" data-lib-group-label="${esc(group)}">${esc(group)}</span>${ids.map(id=>types.find(t=>t[0]==id)).map(t=>`<button type="button" data-add="${t[0]}" data-lib-group="${esc(group)}" data-search="${esc((t[2]+' '+t[3]).toLocaleLowerCase('vi'))}"><em aria-hidden="true">${t[1]}</em><span>${t[2]}<small>${t[3]}</small></span></button>`).join('')}`).join('')}</div><div id="cv"></div><div class="card" id="pp"></div></div>`);
  $('#ttl').oninput=e=>{cur.title=e.target.value;dirty()};
  $$('[data-add]').forEach(b=>b.onclick=()=>addQuestion(b.dataset.add));
+ const libSearch=$('#lib-search');
+ if(libSearch)libSearch.oninput=()=>{
+  const query=libSearch.value.trim().toLocaleLowerCase('vi');
+  $$('[data-add]').forEach(button=>{button.hidden=Boolean(query)&&!button.dataset.search.includes(query)});
+  $$('[data-lib-group-label]').forEach(label=>{label.hidden=!$$(`[data-add][data-lib-group="${label.dataset.libGroupLabel}"]`).some(button=>!button.hidden)})
+ };
  $$('[data-m]').forEach(b=>{b.setAttribute('aria-pressed',String(b.classList.contains('on')));b.onclick=()=>{mode=b.dataset.m;$$('[data-m]').forEach(x=>{x.classList.toggle('on',x==b);x.setAttribute('aria-pressed',String(x==b))});drawCv();drawPp()}});
  $('#pub').onclick=async()=>{const button=$('#pub'),restore=setButtonLoading(button,'Đang lưu…'),oldStatus=cur.status;cur.status=cur.status=='published'?'draft':'published';clearTimeout(saveT);if(await save()){toast(cur.status=='published'?'Đã xuất bản — chia sẻ đường dẫn bên dưới tiêu đề':'Đã chuyển về bản nháp');builderRender()}else{cur.status=oldStatus;restore()}};
  const del=$('#del');if(del)del.onclick=async()=>{if(!await confirmAction('Khảo sát và toàn bộ phản hồi liên quan sẽ bị xóa vĩnh viễn.'))return;const button=del,restore=setButtonLoading(button,'Đang xóa…');try{await api('DELETE','/surveys/'+cur.id);toast('Đã xóa khảo sát');location.hash='#/dashboard'}catch(e){restore();toast(e.message,'error')}};
  const cp=$('#cp');if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(pubLink());toast('Đã sao chép đường dẫn')}catch(e){toast('Không thể sao chép đường dẫn trên thiết bị này')}} 
  drawCv();drawPp()}
-const typeGroups=[['Lựa chọn',['single','mc','image','rank']],['Thang đo',['likert','rating','slider','sd','matrix']],['Văn bản',['text','longtext']]];
+const typeGroups=[['Lựa chọn',['single','mc','image','rank']],['Thang đo',['likert','rating','slider','sd','matrix']],['Nhập liệu',['text','longtext','time']]];
 function addQuestion(type){cur.questions.push(mk(type));selI=cur.questions.length-1;mode='edit';$$('[data-m]').forEach(x=>{x.classList.toggle('on',x.dataset.m=='edit');x.setAttribute('aria-pressed',String(x.dataset.m=='edit'))});drawCv();drawPp();dirty();toast('Đã thêm '+TN[type]);$('#cv').lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'})}
 const setSv=t=>{const e=$('#sv');if(e){e.textContent=t;e.dataset.state=t.startsWith('Chưa')?'error':t.startsWith('Đang')?'saving':'saved'}};
 function dirty(){setSv('Đang lưu…');clearTimeout(saveT);saveT=setTimeout(save,800)}
@@ -841,7 +918,7 @@ function drawCv(){
  if(qcount)qcount.textContent=cur.questions.length+' câu hỏi';
  cv.innerHTML=cur.questions.length?cur.questions.map((q,i)=>`<div class="q ${i==selI&&edit?'is-selected':''} ${edit?'':'is-preview'}" draggable="${edit}" data-i="${i}">${edit?'<span class="grip" title="Kéo để sắp xếp" aria-hidden="true">⋮⋮</span>':''}<div class="tag"><span class="qnum">${i+1}</span><span>${TN[q.question_type]}</span>${q.is_required?'<span class="req">Bắt buộc</span>':'<span class="opt-tag">Tùy chọn</span>'}</div><h3>${esc(q.question_text)}</h3>${body(q)}</div>`).join(''):emptyState('Khảo sát chưa có câu hỏi','Chọn một dạng trong thư viện câu hỏi, hoặc bắt đầu nhanh với một dạng phổ biến bên dưới.',['likert','single','longtext'].map(t=>`<button class="btn" type="button" data-quick-add="${t}">${svg('plus')}${TN[t]}</button>`).join(''),'edit');
  $$('[data-quick-add]',cv).forEach(b=>b.onclick=()=>addQuestion(b.dataset.quickAdd));
- $$('.q',cv).forEach(el=>{wire(el);const i=+el.dataset.i;
+ $$('.q',cv).forEach(el=>{wire(el);wireTime(el);const i=+el.dataset.i;
   el.onclick=()=>{if(edit&&selI!=i){selI=i;drawCv();drawPp()}};
   el.ondragstart=()=>{dragI=i;setTimeout(()=>el.classList.add('drag'))};el.ondragend=()=>el.classList.remove('drag');
   el.ondragover=e=>{e.preventDefault();el.classList.add('over')};el.ondragleave=()=>el.classList.remove('over');
@@ -851,21 +928,50 @@ function drawPp(){
  const q=cur.questions[selI],pp=$('#pp');
  if(mode=='prev'){pp.innerHTML=`<div class="pp-empty">${svg('eye')}<strong>Chế độ xem trước</strong><p>Người tham gia sẽ thấy từng câu một, có thanh tiến độ và nút quay lại.</p><a class="btn" href="#/preview/${cur.id}" onclick="clearTimeout(saveT);save()">${svg('external')}Mở trải nghiệm đầy đủ</a></div>`;return}
  if(!q){pp.innerHTML=`<div class="pp-empty">${svg('edit')}<strong>Thuộc tính câu hỏi</strong><p>Thêm một câu hỏi để chỉnh nội dung, lựa chọn, câu kiểm tra chú ý và kiểm tra nhất quán.</p></div>`;return}
- const t=q.question_type,s=q.settings,attentionCheck=s.attention_check,consistencyCheck=s.consistency_check;
+ const t=q.question_type,s=q.settings||(q.settings={}),attentionCheck=s.attention_check,consistencyCheck=s.consistency_check;
  const consistencyQuestions=['single','likert','rating'].includes(t)
   ?cur.questions.map((question,index)=>({question,index})).filter(({question,index})=>index!==selI&&question.question_type===t):[];
- pp.innerHTML=`<div class="pp-head"><h3>Thuộc tính</h3><span class="chip c-run">Câu ${selI+1} · ${TN[t]}</span></div><label class="lb" for="qt">Nội dung câu hỏi</label><textarea id="qt" style="min-height:80px;margin:6px 0 14px">${esc(q.question_text)}</textarea>
- ${hasOpts(t)?`<label class="lb" for="qo">${t=='matrix'?'Các hàng':'Lựa chọn'} (mỗi dòng một mục)</label><textarea id="qo" style="margin:6px 0 14px">${esc(q.options.map(o=>o.label).join('\n'))}</textarea>`:''}
- ${t=='matrix'?`<label class="lb">Các cột (cách nhau bằng dấu phẩy)</label><input class="in" id="qc" value="${esc((s.cols||[]).join(', '))}" style="margin:6px 0 14px">`:''}
- ${t=='sd'?`<label class="lb">Cặp đối lập (mỗi dòng: trái | phải)</label><textarea id="qs" style="margin:6px 0 14px">${esc((s.pairs||[]).map(p=>p.join(' | ')).join('\n'))}</textarea>`:''}
- ${t=='likert'||t=='slider'?`<label class="lb">Nhãn hai đầu</label><input class="in" id="lo" value="${esc(s.lo||'')}" placeholder="Đầu thấp" style="margin:6px 0 8px"><input class="in" id="hi" value="${esc(s.hi||'')}" placeholder="Đầu cao">`:''}
+ pp.innerHTML=`<div class="pp-head"><h3>Thuộc tính</h3><span class="chip c-run">Câu ${selI+1} · ${TN[t]}</span></div>
+ <div class="pp-preview" aria-hidden="true"><span class="pp-preview-label">Xem trước</span>${body(q)}</div>
+ <div class="pp-section"><label class="lb" for="qt">Nội dung câu hỏi</label><textarea id="qt" style="min-height:80px">${esc(q.question_text)}</textarea></div>
+ ${hasOpts(t)?`<div class="pp-section"><label class="lb" for="qo">${t=='matrix'?'Các hàng':'Lựa chọn'} (mỗi dòng một mục)</label><textarea id="qo">${esc((q.options||[]).map(o=>o.label).join('\n'))}</textarea></div>`:''}
+ ${t=='image'?`<div class="pp-section img-upload-block"><span class="lb">Ảnh cho từng lựa chọn</span><div class="img-uploads" id="q-imgs"></div><p class="pp-hint">Ảnh được thu nhỏ ngay trên trình duyệt (khoảng 120 KB mỗi ảnh) rồi lưu cùng câu hỏi. Không tải ảnh chứa thông tin cá nhân.</p></div>`:''}
+ ${t=='matrix'?`<div class="pp-section"><label class="lb">Các cột (cách nhau bằng dấu phẩy)</label><input class="in" id="qc" value="${esc((s.cols||[]).join(', '))}"></div>`:''}
+ ${t=='sd'?`<div class="pp-section"><label class="lb">Cặp đối lập (mỗi dòng: trái | phải)</label><textarea id="qs">${esc((s.pairs||[]).map(p=>p.join(' | ')).join('\n'))}</textarea></div>`:''}
+ ${t=='likert'||t=='slider'?`<div class="pp-section"><label class="lb">Nhãn hai đầu</label><input class="in" id="lo" value="${esc(s.lo||'')}" placeholder="Đầu thấp"><input class="in" id="hi" value="${esc(s.hi||'')}" placeholder="Đầu cao"></div>`:''}
+ ${['text','longtext','time'].includes(t)?`<div class="pp-section">${UIKit.inputField({label:'Gợi ý trong ô trả lời',id:'qph',labelClass:'lb',value:s.placeholder||'',attrs:`placeholder="${esc(t=='time'?'23:30':'Câu trả lời của bạn')}"`})}</div>`:''}
  ${['single','likert','rating'].includes(t)?`<div class="attention-config"><label class="field"><input type="checkbox" id="ac" ${attentionCheck?'checked':''} ${t=='single'&&!q.options.length?'disabled':''}> Câu kiểm tra chú ý</label><p>Đáp án sai chỉ tạo tín hiệu cần xem xét; không tự động loại phản hồi.</p><label class="lb" for="ac-value">Đáp án mong đợi</label><select class="sel" id="ac-value" ${attentionCheck?'':'disabled'}>${(t=='single'?q.options.map(o=>[o.label,o.label]):[1,2,3,4,5].map(n=>[String(n),String(n)])).map(([value,label])=>`<option value="${esc(value)}" ${String(attentionCheck?.expected??(t=='single'?q.options[0]?.label:'3'))===String(value)?'selected':''}>${esc(label)}</option>`).join('')}</select></div>`:''}
  ${['single','likert','rating'].includes(t)?`<div class="consistency-config"><label class="lb" for="consistency-question">Kiểm tra nhất quán có cấu hình</label><p>Chỉ gắn cờ khi câu trả lời vi phạm mối quan hệ bạn chọn; không tự động loại phản hồi.</p><select class="sel" id="consistency-question" ${consistencyQuestions.length?'':'disabled'}><option value="">${consistencyQuestions.length?'Không kiểm tra':'Thêm câu cùng dạng để cấu hình'}</option>${consistencyQuestions.map(({question})=>`<option value="${esc(question.id)}" ${consistencyCheck?.question_id===question.id?'selected':''}>${esc(question.question_text)}</option>`).join('')}</select><label class="lb" for="consistency-relation">Mối quan hệ dự kiến</label><select class="sel" id="consistency-relation" ${consistencyCheck?'':'disabled'}><option value="same" ${consistencyCheck?.relation!=='different'?'selected':''}>Câu trả lời nên trùng nhau</option><option value="different" ${consistencyCheck?.relation==='different'?'selected':''}>Câu trả lời nên khác nhau</option></select></div>`:''}
  <label class="field"><input type="checkbox" id="rq" ${q.is_required?'checked':''}> Bắt buộc trả lời</label>
  <div class="pp-actions"><button class="btn" type="button" id="dup">${svg('copy')}Nhân đôi</button><button class="btn text-danger" type="button" id="rm">${svg('trash')}Xóa câu hỏi</button></div>`;
- const on=(id,fn)=>{const e=$(id);if(e)e.oninput=()=>{fn(e);drawCv();dirty()}};
+ const refreshPreview=()=>{const box=$('.pp-preview',pp);if(box)box.innerHTML=`<span class="pp-preview-label">Xem trước</span>${body(q)}`};
+ const on=(id,fn)=>{const e=$(id);if(e)e.oninput=()=>{fn(e);refreshPreview();drawCv();dirty()}};
  on('#qt',e=>q.question_text=e.value);on('#rq',e=>q.is_required=e.checked);
- on('#qo',e=>{q.options=L(lines(e.value));if(t=='single'){
+ on('#qph',e=>s.placeholder=e.value);
+ const images=()=>{if(!Array.isArray(s.images))s.images=[];return s.images};
+ const renderImgs=()=>{
+  const box=$('#q-imgs',pp);if(!box)return;
+  const list=images(),options=q.options||[];
+  while(list.length<options.length)list.push(null);
+  if(list.length>options.length)list.length=options.length;
+  box.innerHTML=options.length?options.map((o,i)=>{
+   const src=imgSrc(list[i]);
+   return `<div class="img-upload${src?' has-image':''}" data-img-option="${i}"><span class="img-upload-thumb" style="${src?`background-image:url('${esc(src)}');background-size:cover;background-position:center`:`background:linear-gradient(135deg,${col[i*2%6]},${col[(i*2+1)%6]})`}" role="img" aria-label="${src?'Ảnh đã chọn':'Chưa có ảnh'}"></span>
+    <span class="img-upload-copy"><b>${esc(o.label)}</b><small>${src?'Đã có ảnh':'Chưa có ảnh'}</small></span>
+    <span class="img-upload-actions"><button class="btn btn-sm" type="button" data-img-pick="${i}">${src?'Đổi ảnh':'Tải ảnh'}</button>${src?`<button class="btn btn-sm text-danger" type="button" data-img-remove="${i}">Bỏ ảnh</button>`:''}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-img-file="${i}" hidden></span></div>`}).join(''):'<p class="pp-hint">Thêm lựa chọn ở trên trước, rồi tải ảnh cho từng lựa chọn.</p>';
+  $$('[data-img-pick]',box).forEach(button=>button.onclick=()=>$(`[data-img-file="${button.dataset.imgPick}"]`,box)?.click());
+  $$('[data-img-file]',box).forEach(input=>input.onchange=async()=>{
+   const file=input.files?.[0],index=+input.dataset.imgFile,wrap=input.closest('.img-upload');
+   if(!file)return;
+   if(wrap)wrap.classList.add('is-busy');
+   try{images()[index]=await compressImage(file);refreshPreview();renderImgs();drawCv();dirty();toast('Đã thêm ảnh cho lựa chọn')}
+   catch(error){toast(error.message,'error')}
+   finally{if(wrap)wrap.classList.remove('is-busy');input.value=''}
+  });
+  $$('[data-img-remove]',box).forEach(button=>button.onclick=()=>{images()[+button.dataset.imgRemove]=null;refreshPreview();renderImgs();drawCv();dirty()});
+ };
+ renderImgs();
+ on('#qo',e=>{q.options=L(lines(e.value));if(t=='image')renderImgs();if(t=='single'){
   const toggle=$('#ac'),answer=$('#ac-value');
   if(!q.options.length){delete s.attention_check;if(toggle){toggle.checked=false;toggle.disabled=true}if(answer){answer.innerHTML='';answer.disabled=true}}
   else{if(s.attention_check&&!q.options.some(o=>o.label===s.attention_check.expected))s.attention_check.expected=q.options[0].label;
@@ -922,7 +1028,8 @@ function restore(q,root,v){
  else if(t=='rank')v.forEach(x=>click($$('.rank',root).find(b=>b.dataset.v==x)));
  else if(t=='matrix')$$('input',root).forEach(i=>{if(v[i.name.slice(String(q.id).length+2)]==i.value)i.checked=true});
  else if(t=='sd')$$('.sd',root).forEach(r=>click($$('.dots button',r).find(b=>+b.dataset.v==v[r.dataset.k])));
- else{const el=$('textarea,input[type=text]',root);el.value=v;el.dispatchEvent(new Event('input'))}}
+ else if(isTimeQuestion(q)){const el=$('.tpick-val',root);if(el){el.value=v;el.dispatchEvent(new Event('input'))}}
+ else{const el=$('textarea,input[type=text]',root);if(el){el.value=v;el.dispatchEvent(new Event('input'))}}}
 
 /* ---------- Analytics ---------- */
 const SIG={too_fast:'Hoàn thành quá nhanh',straightline:'Chọn một đáp án lặp lại',gibberish:'Văn bản vô nghĩa',attention_check:'Sai câu kiểm tra chú ý',duplicate:'Trùng bộ câu trả lời',frequency:'Gửi liên tục từ một thiết bị'};
