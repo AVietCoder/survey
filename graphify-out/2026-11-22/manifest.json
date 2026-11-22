@@ -504,9 +504,9 @@
     "semantic_hash": "805a0422dc8f3aad42f086764aafdcd0"
   },
   "frontend/js/village.js": {
-    "mtime": 1795337153.1151352,
-    "seen": 1795337220.8972158,
-    "ast_hash": "9e6e2622527ec411dca5f435ec04b00b",
+    "mtime": 1795337336.0999804,
+    "seen": 1795337390.741859,
+    "ast_hash": "5fef39e8d7227e02b144b730a30f2741",
     "semantic_hash": ""
   },
   "backend/scripts/seed-demo-study.js": {

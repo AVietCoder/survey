@@ -192,9 +192,9 @@
     "semantic_hash": "83fdd6af9717f8044e2c37ffc01b1c72"
   },
   "frontend/js/app.js": {
-    "mtime": 1795326886.3253245,
-    "seen": 1795329296.0957706,
-    "ast_hash": "b9b2862a73e84ee5284284528ea75a31",
+    "mtime": 1795342648.4380455,
+    "seen": 1795342725.0731988,
+    "ast_hash": "7c05641c70904113b4e38942453d0cc3",
     "semantic_hash": ""
   },
   "frontend/js/ui.js": {
@@ -504,9 +504,9 @@
     "semantic_hash": "805a0422dc8f3aad42f086764aafdcd0"
   },
   "frontend/js/village.js": {
-    "mtime": 1795337336.0999804,
-    "seen": 1795337390.741859,
-    "ast_hash": "5fef39e8d7227e02b144b730a30f2741",
+    "mtime": 1795337664.4906502,
+    "seen": 1795342725.0733275,
+    "ast_hash": "759af8365160d2f75c0aa6f5624dbf11",
     "semantic_hash": ""
   },
   "backend/scripts/seed-demo-study.js": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "docs/implementation-log.md": {
-    "mtime": 1795337201.0433123,
-    "seen": 1795337220.8974903,
-    "ast_hash": "eac582946ee0f782f684d19812cfaa8c",
+    "mtime": 1795342697.1730404,
+    "seen": 1795342725.0734649,
+    "ast_hash": "fd605c40ba9a8d0d89c52a1bec9d3615",
     "semantic_hash": ""
   },
   "docs/reward-roadmap.md": {
@@ -627,24 +627,6 @@
     "mtime": 1795328097.5085173,
     "seen": 1795329296.096115,
     "ast_hash": "90c4f821d06b8c7ca73b5c8290f8445f",
-    "semantic_hash": ""
-  },
-  "image_6487327.JPG": {
-    "mtime": 1795327922.406341,
-    "seen": 1795329296.096208,
-    "ast_hash": "016adcb1ad835e111e4a6756e7f86a2c",
-    "semantic_hash": ""
-  },
-  "unnamed.jpg": {
-    "mtime": 1795327927.139346,
-    "seen": 1795329296.09621,
-    "ast_hash": "91ee16321112e16ef8fe2013650a56ab",
-    "semantic_hash": ""
-  },
-  "661379772_926533233626085_1829687764049876690_n.jpg": {
-    "mtime": 1795335355.9713862,
-    "seen": 1795336497.6414592,
-    "ast_hash": "1ef024410316677ef2d5ebefbfb3a96b",
     "semantic_hash": ""
   },
   "backend/package-lock.json": {

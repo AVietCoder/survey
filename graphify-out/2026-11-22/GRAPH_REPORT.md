@@ -1,7 +1,7 @@
 # Graph Report - lumen-survey-fullstack  (2026-11-22)
 
 ## Corpus Check
-- 104 files · ~124,485 words
+- 104 files · ~124,552 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .css 5, (none) 2, .example 1)
 
@@ -72,16 +72,16 @@
 10. `supabase` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Tài khoản học sinh (migration 019) - đã làm, chờ chạy migration` --references--> `mintCredential()`  [INFERRED]
-  docs/implementation-log.md → backend/src/services/tracking.js
 - `Mini-game "Làng nhỏ" - đã làm` --references--> `village()`  [INFERRED]
   docs/implementation-log.md → backend/src/services/reward.js
-- `Giao diện nhiệm vụ theo kiểu + câu hỏi giờ trong ngày + tải ảnh (2026-11-22)` --references--> `textareaField()`  [INFERRED]
-  docs/implementation-log.md → frontend/js/components.js
 - `Ba kiểu nhân vật + đổi thú cưng nhanh hơn (2026-11-22, theo newtask.md)` --references--> `normalizeAvatar()`  [INFERRED]
   docs/implementation-log.md → backend/src/services/reward.js
+- `Tài khoản học sinh (migration 019) - đã làm, chờ chạy migration` --references--> `mintCredential()`  [INFERRED]
+  docs/implementation-log.md → backend/src/services/tracking.js
 - `Giai đoạn 5 — Assent và đồng ý phụ huynh cấu hình được (migration `014`)` --references--> `consentHash()`  [INFERRED]
   docs/reward-roadmap.md → backend/src/services/tracking.js
+- `Giao diện nhiệm vụ theo kiểu + câu hỏi giờ trong ngày + tải ảnh (2026-11-22)` --references--> `textareaField()`  [INFERRED]
+  docs/implementation-log.md → frontend/js/components.js
 
 ## Import Cycles
 - None detected.

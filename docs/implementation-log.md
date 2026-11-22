@@ -95,6 +95,14 @@ Tách ra từ `CLAUDE.md`. Mỗi mục: đã làm gì, file/migration, cách ki�
 - Test: `backend/test/survey-questions.test.js` (7) và `backend/test/survey-question-time-http.test.js` (3); toàn bộ `npm test` xanh (209 test). Kiểm tra cú pháp `node --check` cho `app.js`, `components.js`, `tracking.js`, `surveys.js` đều qua.
 - Chưa kiểm chứng: ảnh render thật ở 1440/820/390 px (Firefox headless trong môi trường này không khởi chạy được qua playwright-core; harness Chrome trước đây đã bị dọn); migration `022` chưa chạy trên Supabase thật; cần người dùng chạy tay.
 
+#### UI/UX tổng thể + cảnh báo tốc độ + màn hình kết quả + nút nhiệm vụ (2026-11-22)
+
+- **Cảnh báo hoàn thành quá nhanh**: thêm `speedViolationModal(duration, minSec)` trong `frontend/js/app.js` (modal có icon cờ 🚩, giải thích và 2 nút Xem lại / Vẫn gửi). Trong `surveyView`, khi nộp bài cuối cùng, nếu thời gian làm < `Math.max(8, round(n*2.5))` giây thì hiện modal trước khi gửi; người dùng có thể xem lại hoặc tiếp tục. CSS `.speed-modal*` trong `cozy.css`.
+- **Màn hình kết quả**: `stage-done` được làm lại với illustration SVG pastel, thẻ `.result-card`, thống kê câu đã trả lời / thời gian / tổng câu hỏi, feedback theo chất lượng (`normal`/`suspicious`/`spam`) và band tracking. CSS `.result-*` trong `cozy.css`.
+- **Nhiệm vụ & phần thưởng**: thêm nút "Nhiệm vụ & phần thưởng" trong `adminView('surveys',...)` liên kết tới `#/tracking/:surveyId` để researcher cấu hình nhiệm vụ, lịch và phần thưởng cho từng khảo sát.
+- **Tài liệu**: cập nhật `docs/implementation-log.md`; graphify-out đã cập nhật.
+- Kiểm tra: `node --check frontend/js/app.js` qua, `npm test` 210/210 pass, `git diff --check` sạch. Chưa kiểm chứng bằng trình duyệt thật.
+
 #### Ba kiểu nhân vật + đổi thú cưng nhanh hơn (2026-11-22, theo newtask.md)
 
 - Nhân vật: giữ **Mặc định** (tùy chỉnh màu da/tóc/áo như cũ), thêm **Emma** (mũ lông trắng trùm đầu, áo đen kiểu gấu trúc, tóc đen, mắt to, má hồng, môi chúm chím) và **Tịnh** (chó bông đầu kem, tai cụp, thân trắng, mắt to). Cả hai vẽ bằng SVG pixel nội tuyến trong `frontend/js/village.js`, chỉ tham khảo ảnh người dùng gửi, không tải/nhúng ảnh thật và không thu thêm dữ liệu.

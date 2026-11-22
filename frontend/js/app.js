@@ -821,7 +821,7 @@ async function adminView(section='overview',surveyId,page=1){
    if(actualPage!==page)return adminView('surveys',surveyId,actualPage);
    let survey=result.survey,questions=survey.questions;
    const renderSurvey=()=>{
-    shell('admin',`${navBack}<div class="admin-detail-head"><a class="btn" href="#/admin/surveys">← Tất cả khảo sát</a><button class="btn danger" id="admin-survey-remove">Xóa khảo sát</button></div>
+    shell('admin',`${navBack}<div class="admin-detail-head"><a class="btn" href="#/admin/surveys">← Tất cả khảo sát</a><a class="btn pri" href="#/tracking/${survey.id}">Nhiệm vụ & phần thưởng</a><button class="btn danger" id="admin-survey-remove">Xóa khảo sát</button></div>
      <form id="admin-survey-edit" class="card admin-survey-edit">
       <div class="admin-survey-fields"><label>Tên khảo sát<input class="in" name="title" value="${esc(survey.title)}" maxlength="200" required></label>
        <label>Tìm chủ sở hữu<input class="in" data-owner-search placeholder="Nhập ít nhất 2 ký tự username"></label>
@@ -996,6 +996,37 @@ function drawPp(){
  $('#rm').onclick=()=>{cur.questions.splice(selI,1);selI=Math.max(0,selI-1);drawCv();drawPp();dirty();toast('Đã xóa câu hỏi')}}
 
 /* ---------- Trải nghiệm người tham gia (công khai + xem trước) ---------- */
+/* ---------- Cảnh báo hoàn thành quá nhanh (cờ chất lượng) ---------- */
+function speedViolationModal(duration,minSec){
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div');
+    overlay.className='speed-modal-overlay';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','speed-modal-title');
+    overlay.innerHTML=`<div class="speed-modal">
+      <div class="speed-modal-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="64" height="64"><path d="M32 6 8 56h48z" fill="#FFF0C2" stroke="#F59E0B" stroke-width="3" stroke-linejoin="round"/><path d="M32 24v16" stroke="#B45309" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="46" r="2.6" fill="#B45309"/></svg>
+        <span class="speed-flag" aria-hidden="true">🚩</span>
+      </div>
+      <h2 id="speed-modal-title">Bạn hoàn thành khá nhanh</h2>
+      <p>Bạn đã hoàn tất trong <b>${duration} giây</b>, thấp hơn mức hợp lý (~${minSec} giây). Điều này có thể ảnh hưởng đến chất lượng câu trả lời và được ghi nhận là tín hiệu cảnh báo.</p>
+      <p class="speed-modal-hint">Bạn có muốn gửi câu trả lời như hiện tại, hay xem lại?</p>
+      <div class="speed-modal-actions">
+        <button type="button" class="btn" data-speed="review">Xem lại câu trả lời</button>
+        <button type="button" class="btn pri" data-speed="send">Vẫn gửi</button>
+      </div>
+    </div>`;
+    document.body.append(overlay);
+    const cleanup=()=>overlay.remove();
+    overlay.querySelector('[data-speed="review"]').onclick=()=>{cleanup();resolve(false)};
+    overlay.querySelector('[data-speed="send"]').onclick=()=>{cleanup();resolve(true)};
+    overlay.addEventListener('click',e=>{if(e.target===overlay){cleanup();resolve(false)}});
+    const onKey=e=>{if(e.key==='Escape'){document.removeEventListener('keydown',onKey);cleanup();resolve(false)}};
+    document.addEventListener('keydown',onKey);
+  });
+}
+
 async function surveyView(slug,previewId,opts={}){
  const bare=h=>{app().className='app bare';app().innerHTML=h};
  let data,readOnlyPreview=false;
@@ -1005,14 +1036,50 @@ async function surveyView(slug,previewId,opts={}){
  const draw=()=>{
   const n=qs.length,w=S.i<0?0:Math.min(S.i,n)/n*100;let inner;
   if(S.i<0)inner=`<div class="stage"><span class="num">${previewId?'Xem trước · ':''}${n} câu hỏi</span><h1>${esc(data.title)}</h1><p class="hint">${esc(data.description||'Câu trả lời của bạn được ghi nhận ẩn danh. Bạn có thể dừng bất cứ lúc nào.')}<br>Khoảng ${Math.max(1,Math.round(n*.5))} phút.</p>${Tracking.introHtml(trk)}<p class="survey-error" id="survey-error" role="alert"></p><button class="btn pri" id="go">Bắt đầu khảo sát</button></div>`;
-  else if(S.i>=n)inner=`<div class="stage stage-done"><span class="done-mark" aria-hidden="true">${svg('check')}</span><div class="big">Cảm ơn bạn</div><p class="hint">${previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':'Câu trả lời của bạn giúp chúng tôi hiểu rõ hơn.'}</p>${Tracking.bandHtml(S.result?.band)}${Tracking.doneHtml(trk,S)}${previewId?(readOnlyPreview?`<a class="btn" href="#/dashboard">Về tổng quan</a>`:`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`):''}</div>`;
-  else{const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
+  else if(S.i>=n){
+    const answered=Object.keys(S.ans).length;
+    const duration=S.startedAt?Math.max(1,Math.round((Date.now()-S.startedAt)/1000)):null;
+    const feedback=previewId?'Đây là bản xem trước — chưa có dữ liệu nào được lưu.':(S.result?.quality_status==='spam'?'Cảm ơn bạn đã hoàn thành. Một số tín hiệu tự động được ghi nhận, researcher sẽ xem xét thêm.':S.result?.quality_status==='suspicious'?'Cảm ơn bạn đã hoàn thành. Một số câu trả lời có thể cần researcher xem xét thêm.':'Câu trả lời của bạn đã được ghi nhận. Cảm ơn bạn đã dành thời gian!');
+    inner=`<div class="stage stage-done">
+      <div class="result-hero" aria-hidden="true">
+        <svg viewBox="0 0 120 120" width="120" height="120"><defs><radialGradient id="rg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFF0C2"/><stop offset="1" stop-color="#FDE68A"/></radialGradient></defs>
+        <circle cx="60" cy="60" r="52" fill="url(#rg)" opacity=".6"/>
+        <circle cx="60" cy="60" r="44" fill="#FFF" opacity=".85"/>
+        <path d="M40 62l14 14 26-28" fill="none" stroke="#8B7CF6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6 6"/></svg>
+      </div>
+      <div class="result-card">
+        <span class="result-chip">Hoàn thành</span>
+        <div class="big">Cảm ơn bạn!</div>
+        <p class="hint">${feedback}</p>
+        <div class="result-stats">
+          <div class="result-stat"><span class="result-stat-icon" aria-hidden="true">📝</span><b>${answered}</b><small>câu đã trả lời</small></div>
+          ${duration?`<div class="result-stat"><span class="result-stat-icon" aria-hidden="true">⏱</span><b>${Math.floor(duration/60)}:${String(duration%60).padStart(2,'0')}</b><small>thời gian</small></div>`:''}
+          <div class="result-stat"><span class="result-stat-icon" aria-hidden="true">⭐</span><b>${qs.length}</b><small>tổng câu hỏi</small></div>
+        </div>
+      </div>
+      ${Tracking.bandHtml(S.result?.band)}
+      ${Tracking.doneHtml(trk,S)}
+      ${previewId?(readOnlyPreview?`<a class="btn" href="#/dashboard">Về tổng quan</a>`:`<a class="btn" href="#/builder/${previewId}">Về trình tạo</a>`):''}
+    </div>`;
+  } else {const q=qs[S.i];inner=`<div class="stage" id="st"><span class="num">Câu ${S.i+1} trên ${n}${q.is_required?'':' · tùy chọn'}</span><h1>${esc(q.question_text)}</h1><p class="hint"></p>${body(q)}<div class="foot"><button class="link" id="bk" ${S.i?'':'style="visibility:hidden"'}>Quay lại</button><button class="btn pri" id="nx">${S.i==n-1?'Hoàn tất':'Tiếp tục'}</button></div></div>`}
   bare(`<div class="sv">${UIKit.skipLink('sv-main')}<div class="top"><i style="width:${w}%"></i></div><nav aria-label="Khảo sát">${previewId?`<a href="#/builder/${previewId}">← Thoát xem trước</a>`:'<span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span>'}<span>${S.i>=0&&S.i<n?'Còn khoảng '+Math.max(1,Math.ceil((n-S.i)/2))+' phút':opts.home?'<span class="home-links"><a href="#/track/login">Khu học sinh</a></span>':''}</span></nav><section id="sv-main" role="main" tabindex="-1">${inner}</section>${credit}</div>`);
-  Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.i=0;draw()};
+  Tracking.wireDone(trk,S,slug);const go=$('#go');if(go)go.onclick=async()=>{S.track=Tracking.wantsTrack(trk);const restore=setButtonLoading(go,'Đang chuẩn bị…');if(!previewId){try{S.rid=(await api('POST',`/public/surveys/${encodeURIComponent(slug)}/start`)).responseId}catch(e){restore();$('#survey-error').textContent=e.message;return}}S.startedAt=Date.now();S.i=0;draw()};
   const st=$('#st');if(!st)return;const q=qs[S.i];
   const next=async()=>{const nextButton=$('#nx');if(nextButton.disabled)return;nextButton.disabled=true;const originalLabel=nextButton.textContent;const v=collect(q,st);if(v===undefined&&q.is_required){nextButton.disabled=false;toast('Vui lòng trả lời câu này để tiếp tục');return}
    if(v!==undefined)S.ans[q.id]=v;else delete S.ans[q.id];
-   if(S.i==qs.length-1){if(!previewId){nextButton.classList.add('is-loading');nextButton.setAttribute('aria-busy','true');nextButton.innerHTML='<span class="spinner" aria-hidden="true"></span>Đang gửi…';try{S.result=await api('POST',`/public/surveys/${encodeURIComponent(slug)}/responses`,{responseId:S.rid,track:S.track===true,answers:Object.entries(S.ans).map(([question_id,value])=>({question_id,value}))})}catch(e){nextButton.disabled=false;nextButton.classList.remove('is-loading');nextButton.removeAttribute('aria-busy');nextButton.textContent=originalLabel;toast(e.message,'error');return}}}
+   if(S.i==qs.length-1){if(!previewId){
+     const startedAt=S.startedAt||Date.now();
+     const duration=Math.round((Date.now()-startedAt)/1000);
+     const minSec=Math.max(8,Math.round(qs.length*2.5));
+     if(duration<minSec){
+       const proceed=await speedViolationModal(duration,minSec);
+       if(!proceed){nextButton.disabled=false;nextButton.textContent=originalLabel;return}
+     }
+     nextButton.classList.add('is-loading');nextButton.setAttribute('aria-busy','true');nextButton.innerHTML='<span class="spinner" aria-hidden="true"></span>Đang gửi…';
+     try{S.result=await api('POST',`/public/surveys/${encodeURIComponent(slug)}/responses`,{responseId:S.rid,track:S.track===true,answers:Object.entries(S.ans).map(([question_id,value])=>({question_id,value}))})}
+     catch(e){nextButton.disabled=false;nextButton.classList.remove('is-loading');nextButton.removeAttribute('aria-busy');nextButton.textContent=originalLabel;toast(e.message,'error');return}
+   }}
    S.i++;draw()};
   wire(st);wireTime(st);
   if(S.ans[q.id]!==undefined)restore(q,st,S.ans[q.id]);          // sau wire() để các nút đã có sự kiện
