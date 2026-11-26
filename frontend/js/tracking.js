@@ -48,7 +48,7 @@ const Tracking = (() => {
 
   /* ---------- khung trang người tham gia (không cần tài khoản) ---------- */
   function frame(inner, { wide = false, bare = false } = {}) {
-    document.onkeydown = null
+    disposeGame()
     app().className = 'app bare tk-app'
     const current = (location.hash.split('/')[2] || 'home') === 'tasks' ? 'village' : (location.hash.split('/')[2] || 'home')
     const participantTab = ['pet', 'tasks', 'inventory', 'village']
@@ -295,7 +295,17 @@ const Tracking = (() => {
      Không tab, không chuyển trang. Sao chỉ đến từ nhiệm vụ (không có nguồn mới); công trình mở theo tổng Sao,
      không tiêu, không mất; nhân vật chỉ vui/thư giãn; khu hỗ trợ luôn mở được từ HUD.
      ===================================================================== */
-  const game = { panel: null, arg: null, scroll: null, lastStars: null, opener: null, data: null }
+  const game = { panel: null, arg: null, scroll: null, lastStars: null, opener: null, data: null, token: 0 }
+  const GAME_ROUTES = ['village', 'tasks', 'pet', 'inventory']
+  const isGameRoute = arg => GAME_ROUTES.includes(arg)
+  const onGameKey = event => { if (event.key === 'Escape' && $('#gw-panel') && !$('#gw-panel').hidden) closePanel() }
+  /** Rời game (đổi trang, đăng nhập lại, lỗi): dừng đồng hồ, gỡ phím tắt, giải phóng cảnh 3D (khi có) và hủy lần tải đang chờ. */
+  function disposeGame() {
+    game.token++
+    clearInterval(taskTicker)
+    document.removeEventListener('keydown', onGameKey)
+    window.World3D?.dispose?.()
+  }
   const GI = {
     quest: '<path d="M6 4h9l3 3v13H6z"/><path d="M9 10h6M9 14h6M9 18h4"/>',
     bag: '<path d="M6 9h12l-1 11H7z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/>',
@@ -334,12 +344,14 @@ const Tracking = (() => {
     const keepScroll = $('#gw-world')?.scrollLeft
     if (keepScroll !== undefined) game.scroll = keepScroll
     if (!$('#gw')) { app().className = 'app bare gw-app'; app().innerHTML = `<div class="gw gw-boot">${loadingBlock()}</div>` }
+    const token = ++game.token                      // trang đổi hoặc có lần tải mới hơn thì bỏ kết quả cũ
     try {
       const [data, today, inv] = await Promise.all([
         tapi('GET', '/track/rewards/village'),
         tapi('GET', '/track/rewards/today').catch(error => { if (isLocked(error) || error.status === 401) throw error; return { enabled: false } }),
         tapi('GET', '/track/rewards/inventory').catch(error => { if (isLocked(error) || error.status === 401) throw error; return null })
       ])
+      if (token !== game.token) return
       const V = window.Village
       if (!data.enabled || !V) {
         frame(`<section class="tk-card tk-narrow"><h1>Làng nhỏ</h1><p>Làng nhỏ sẽ mở khi khảo sát của bạn có bật nhiệm vụ. Hãy hoàn thành khảo sát nhà trường gửi và đồng ý lưu kết quả.</p>
@@ -348,6 +360,7 @@ const Tracking = (() => {
       }
       renderGame({ V, data, today, inv }, open, arg)
     } catch (error) {
+      if (token !== game.token) return
       if (error.status === 401) return loginView()
       if (isLocked(error)) return lockedView()
       frame(failBlock(error.message)); $('#tk-retry').onclick = () => gameView()
@@ -373,8 +386,17 @@ const Tracking = (() => {
     game.lastStars = data.stars
 
     app().className = 'app bare gw-app'
-    app().innerHTML = `<div class="gw${night ? ' is-night' : ''}" id="gw">
-      <div class="gw-world" id="gw-world" aria-label="Thế giới làng nhỏ. Kéo để xem, nhấn vào công trình hoặc nhân vật.">${V.scene({ ...data, avatar }, { night, fresh, interactive: true })}</div>
+    const mounted = Boolean($('#gw-ui'))
+    if (!mounted) mountGame()
+    $('#gw').classList.toggle('is-night', night)
+
+    // Cảnh làng: vẽ lại nội dung, giữ nguyên khung (khung này sẽ chứa canvas 3D ở giai đoạn sau) và vị trí đang xem
+    const world = $('#gw-world')
+    const keep = mounted ? world.scrollLeft : game.scroll
+    world.innerHTML = V.scene({ ...data, avatar }, { night, fresh, interactive: true })
+    world.scrollLeft = keep ?? Math.max(0, (world.scrollWidth - world.clientWidth) / 2)
+
+    $('#gw-ui').innerHTML = `
       <header class="gw-hud">
         <button type="button" class="gw-portrait" data-open="hero" aria-label="Nhân vật của bạn, cấp làng ${level}. Nhấn để tùy chỉnh">
           <span class="gw-portrait-img">${V.avatarSvg(avatar)}</span><span class="gw-level" aria-hidden="true">${level}</span></button>
@@ -400,15 +422,27 @@ const Tracking = (() => {
         <button type="button" data-open="bag">${gi('bag')}<span>Túi đồ</span></button>
         <button type="button" data-open="hero">${gi('hero')}<span>Nhân vật</span></button>
         <button type="button" data-open="codex">${gi('book')}<span>Sổ làng</span></button>
-      </nav>
+      </nav>`
+
+    $$('#gw-ui [data-open]').forEach(button => button.onclick = () => openPanel(button.dataset.open, null, button))
+    $('#gw-bubble-x').onclick = () => $('#gw-bubble').remove()
+    if (fresh.size) toast(`Làng vừa có thêm: ${unlocked.filter(b => fresh.has(b.key)).map(b => b.name).join(', ')}`)
+    if (open) openPanel(open, arg, null, { instant: true })
+    else if (!$('#gw-panel').hidden) closePanel()
+  }
+
+  /** Khung game chỉ dựng một lần cho mỗi lần vào game; sau đó chỉ cập nhật cảnh, HUD và nội dung bảng. */
+  function mountGame() {
+    app().innerHTML = `<div class="gw" id="gw">
+      <div class="gw-world" id="gw-world" aria-label="Thế giới làng nhỏ. Kéo để xem, nhấn vào công trình hoặc nhân vật."></div>
+      <div class="gw-ui" id="gw-ui"></div>
       <aside class="gw-panel" id="gw-panel" role="dialog" aria-modal="false" aria-labelledby="gw-panel-title" hidden>
         <header class="gw-panel-head"><h2 id="gw-panel-title"></h2><button type="button" class="gw-round" id="gw-panel-x" aria-label="Đóng">${gi('close')}</button></header>
         <div class="gw-panel-body" id="gw-panel-body"></div></aside>
     </div>`
 
-    // thế giới: cuộn tới giữa, kéo để xem (chuột), chạm thì cuộn tự nhiên
+    // thế giới: kéo để xem (chuột), chạm thì cuộn tự nhiên
     const world = $('#gw-world')
-    world.scrollLeft = game.scroll ?? Math.max(0, (world.scrollWidth - world.clientWidth) / 2)
     let drag = null
     world.onpointerdown = event => { if (event.pointerType === 'mouse' && event.button === 0) drag = { x: event.clientX, left: world.scrollLeft, moved: false } }
     world.onpointermove = event => { if (!drag) return; const dx = event.clientX - drag.x; if (Math.abs(dx) > 4) { drag.moved = true; world.scrollLeft = drag.left - dx; world.classList.add('is-dragging') } }
@@ -424,13 +458,9 @@ const Tracking = (() => {
     }
     world.onclick = event => { if (drag?.moved) return; activate(event.target) }
     world.onkeydown = event => { if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[role=button]')) { event.preventDefault(); activate(event.target) } }
-
-    $$('[data-open]').forEach(button => button.onclick = () => openPanel(button.dataset.open, null, button))
     $('#gw-panel-x').onclick = closePanel
-    $('#gw-bubble-x').onclick = () => $('#gw-bubble').remove()
-    document.onkeydown = event => { if (event.key === 'Escape' && $('#gw-panel') && !$('#gw-panel').hidden) closePanel() }
-    if (fresh.size) toast(`Làng vừa có thêm: ${unlocked.filter(b => fresh.has(b.key)).map(b => b.name).join(', ')}`)
-    if (open) openPanel(open, arg, null, { instant: true })
+    document.removeEventListener('keydown', onGameKey)
+    document.addEventListener('keydown', onGameKey)
   }
 
   function closePanel() {
@@ -447,6 +477,7 @@ const Tracking = (() => {
     const { V, data, today, inv } = game.data
     const panel = $('#gw-panel'), body = $('#gw-panel-body'), title = $('#gw-panel-title')
     clearInterval(taskTicker)
+    body.onclick = body.oninput = body.onchange = null          // bảng được giữ lại giữa các lần cập nhật nên phải gỡ xử lý cũ
     game.panel = kind; game.arg = arg; if (opener) game.opener = opener
     panel.dataset.kind = kind
     const unit = data.unit
@@ -1204,5 +1235,5 @@ const Tracking = (() => {
     })
   }
 
-  return { context, introHtml, wantsTrack, bandHtml, doneHtml, wireDone, participantRoute, configView }
+  return { context, introHtml, wantsTrack, bandHtml, doneHtml, wireDone, participantRoute, configView, isGameRoute, disposeGame }
 })()

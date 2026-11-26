@@ -1331,6 +1331,7 @@ function homeEmpty(){
  app().innerHTML=`<div class="sv"><nav><span class="logo sv-logo"><i></i><span class="brand-word">brainst0rm</span></span><span class="home-links"><a href="#/track/login">Khu học sinh</a></span></nav><section><div class="stage"><span class="num">brainst0rm</span><h1>Chưa có khảo sát để hiển thị</h1><p class="hint">Quản trị viên chưa chọn khảo sát mặc định cho trang chủ. Nếu bạn nhận được liên kết khảo sát riêng, hãy mở trực tiếp liên kết đó.</p><div class="foot"><a class="link" href="#/track">Xem tiến triển của tôi</a><a class="btn pri" href="#/track/login">Khu học sinh</a></div></div></section>${credit}</div>`}
 async function render(){
  const [r,arg,detail]=location.hash.replace(/^#\/?/,'').split('/');
+ if(!(r=='track'&&Tracking.isGameRoute(arg)))Tracking.disposeGame();
  if(r=='login'){location.replace('#/bakhibakhi');return}
  if(r=='s'&&arg)return surveyView(arg);
  if(r=='track')return Tracking.participantRoute(arg,detail);

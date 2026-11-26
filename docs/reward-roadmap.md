@@ -16,6 +16,7 @@ Tách ra từ `CLAUDE.md` (nguyên tắc bất biến §2 và quy ước làm vi
 | Nhóm đối chứng, xuất dữ liệu theo nhóm | **Chưa làm** (giai đoạn 6) |
 | Chính sách lưu trữ / xóa dữ liệu | **Chưa làm** (giai đoạn 7) |
 | Mức điểm cho từng phản hồi trong Phân tích | **Chưa làm** (giai đoạn 8) |
+| Game 3D voxel (`docs/world3d-plan.md`) | Giai đoạn 0 (nền tảng) xong ở code/test/Firefox; chờ kiểm tra Vercel và duyệt trước giai đoạn 1 |
 
 Migration `006`–`009` chưa xác nhận đã chạy trên Supabase thật (006 nhiều khả năng đã chạy); người dùng báo đã chạy `010`. Migration `011` cần chạy thủ công. Không tự chạy migration lên DB thật.
 

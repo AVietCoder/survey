@@ -192,9 +192,9 @@
     "semantic_hash": "83fdd6af9717f8044e2c37ffc01b1c72"
   },
   "frontend/js/app.js": {
-    "mtime": 1795342648.4380455,
-    "seen": 1795342725.0731988,
-    "ast_hash": "7c05641c70904113b4e38942453d0cc3",
+    "mtime": 1795705919.167404,
+    "seen": 1795706048.349272,
+    "ast_hash": "ff24b261ffc76b63030e30e67f84d5a0",
     "semantic_hash": ""
   },
   "frontend/js/ui.js": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "frontend/index.html": {
-    "mtime": 1795251843.656111,
-    "seen": 1795251874.7679017,
-    "ast_hash": "ec5c3829b63d9a32bca199757a5224ad",
+    "mtime": 1795705919.167404,
+    "seen": 1795706048.3495946,
+    "ast_hash": "1e5f6c3c2b3545b44f83fb43ddb60e2e",
     "semantic_hash": ""
   },
   "none.md": {
@@ -330,9 +330,9 @@
     "semantic_hash": "9d9375869bbd317755598494172895d1"
   },
   "frontend/js/tracking.js": {
-    "mtime": 1795328883.9174447,
-    "seen": 1795329296.0958393,
-    "ast_hash": "b804f04ea46f37f7ce201aa14be8e0bf",
+    "mtime": 1795705919.164404,
+    "seen": 1795706048.3493414,
+    "ast_hash": "186f6b6bd3e04e49bb489266fa9a29ec",
     "semantic_hash": ""
   },
   "design-spec-cozy-purple.md": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795281283.5469177,
-    "seen": 1795281356.1123962,
-    "ast_hash": "7eaf7440b531adea9cd37b0b47520bf7",
+    "mtime": 1795706192.8722796,
+    "seen": 1795706216.40921,
+    "ast_hash": "391fc374d197da1468f8717b22047e16",
     "semantic_hash": ""
   },
   "docs/answer.md": {
@@ -600,15 +600,15 @@
     "semantic_hash": ""
   },
   "docs/implementation-log.md": {
-    "mtime": 1795342697.1730404,
-    "seen": 1795342725.0734649,
-    "ast_hash": "fd605c40ba9a8d0d89c52a1bec9d3615",
+    "mtime": 1795706215.7952693,
+    "seen": 1795706216.4093466,
+    "ast_hash": "7f5851da8c454ebe907859abb5658796",
     "semantic_hash": ""
   },
   "docs/reward-roadmap.md": {
-    "mtime": 1795281283.5469177,
-    "seen": 1795281356.1125138,
-    "ast_hash": "6654618382cb8be06137e0f875aa1911",
+    "mtime": 1795706043.7823474,
+    "seen": 1795706048.3495297,
+    "ast_hash": "9f83b343eda42e7a01271f6d95c5d418",
     "semantic_hash": ""
   },
   "backend/test/survey-question-time-http.test.js": {
@@ -627,6 +627,30 @@
     "mtime": 1795328097.5085173,
     "seen": 1795329296.096115,
     "ast_hash": "90c4f821d06b8c7ca73b5c8290f8445f",
+    "semantic_hash": ""
+  },
+  "backend/test/world3d-foundation.test.js": {
+    "mtime": 1795705959.3393857,
+    "seen": 1795706048.3492477,
+    "ast_hash": "1cac7ed16369542b0625fa733c814be7",
+    "semantic_hash": ""
+  },
+  "frontend/js/world-support.js": {
+    "mtime": 1795705959.3203857,
+    "seen": 1795706048.3493865,
+    "ast_hash": "76ad767ef09c127acfd9922393134248",
+    "semantic_hash": ""
+  },
+  "curplan.md": {
+    "mtime": 1795705867.0994277,
+    "seen": 1795706048.3494866,
+    "ast_hash": "239d47a29b565324c3048ec07aa519f7",
+    "semantic_hash": ""
+  },
+  "docs/world3d-plan.md": {
+    "mtime": 1795706043.7663474,
+    "seen": 1795706048.3495731,
+    "ast_hash": "acd51b1d05b03fc02f0c26508deec838",
     "semantic_hash": ""
   },
   "backend/package-lock.json": {

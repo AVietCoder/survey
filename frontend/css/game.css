@@ -226,3 +226,6 @@ body:has(.gw-app) .toast-region{top:16px;bottom:auto;left:50%;right:auto;transfo
   .gw-bubble{top:144px}
 }
 @media(max-width:640px){.gw-coach-name{display:none}}
+
+/* Lớp giữ HUD để cập nhật riêng, không ảnh hưởng bố cục */
+.gw-ui{display:contents}

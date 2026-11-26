@@ -112,3 +112,12 @@ Tách ra từ `CLAUDE.md`. Mỗi mục: đã làm gì, file/migration, cách ki�
 - CSS: `.vl-presets`, `.vl-preset*`, `#vl-parts[hidden]`, `.vl-pet-status`, `.vl-pill.is-saving`, hoạt ảnh `.vl-swap` (tắt khi `prefers-reduced-motion: reduce`); mobile ≤380px xếp thẻ 2 cột.
 - Test: thêm 1 test preset trong `backend/test/reward.test.js`; `npm test` xanh 210/210. Đã kiểm tra cú pháp `node --check` cho `village.js`, `tracking.js`, `reward.js`.
 - Chưa kiểm chứng: ảnh render thật trong trình duyệt (chỉ raster hóa các `<rect>` bằng PIL để xem hình pixel; chưa chạy Chrome/Firefox headless trong môi trường này). Cần người dùng mở `#/track/village` → Nhân vật để xem ở 1440/820/390 px.
+#### Game 3D, giai đoạn 0: nền tảng (2026-11-26)
+
+- Kế hoạch đã được chủ dự án duyệt: `docs/world3d-plan.md` (Three.js cục bộ, trùm boss không thể thua và không cho Sao, vật phẩm lưu máy chủ ở migration 023, điện thoại có điều khiển chạm, giữ làng 2D làm chế độ nhẹ). Làm từng giai đoạn, duyệt xong mới sang giai đoạn sau.
+- Game giờ **dựng khung một lần** (`mountGame`: `#gw-world`, `#gw-ui`, `#gw-panel`), sau mỗi hành động chỉ cập nhật cảnh/HUD/bảng (canvas 3D sau này không bị hủy). `openPanel` gỡ xử lý sự kiện cũ trên thân bảng.
+- Dọn dẹp: `Tracking.disposeGame()` được gọi từ `render()` (khi route không phải game) và `frame()`; phím Esc dùng `addEventListener` có gỡ; `game.token` bỏ kết quả tải về muộn. `disposeGame` gọi `window.World3D?.dispose()` cho giai đoạn 1.
+- three.js 0.187.0 chép vào `frontend/vendor/three/` (chưa thu nhỏ, ~2,1 MB thô / ~0,42 MB gzip). `frontend/js/world-support.js`: chọn chế độ (3D mặc định tắt, thử bằng `?world=3d`; thiếu WebGL2 hoặc người dùng chọn → nhẹ) và tải thư viện, lỗi trả null. Chưa có cảnh 3D nên người dùng không thấy gì khác.
+- Test: `test/world3d-foundation.test.js` (6: computeStreak, Thẻ nghỉ, mở khóa, cancelStart/village, chọn chế độ, tải thư viện); `npm test` 216/216. Trình duyệt (Firefox + DB giả): hoàn thành việc trong bảng giữ nguyên khung và cập nhật Sao; đổi route trong game; Esc; rời game; rời khi đang tải; `/vendor` trả đúng MIME; không lỗi JS; 390px không tràn.
+- **Chưa kiểm chứng:** triển khai Vercel có phục vụ `/vendor/*.js` đúng hay không (cần bản preview của chủ dự án); test không tốn công đo tốc độ khung hình.
+- Hồi quy ngắn: mở khảo sát công khai và sang câu 1, `#/track`, `#/track/login`, trang đăng nhập nhà nghiên cứu: không lỗi JS (chưa chạy lại hành trình nộp bài, theo dõi tiến triển và các trang nhà nghiên cứu sau đăng nhập). Thêm `.graphifyignore` loại `frontend/vendor/`.
