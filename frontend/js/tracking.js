@@ -295,16 +295,57 @@ const Tracking = (() => {
      Không tab, không chuyển trang. Sao chỉ đến từ nhiệm vụ (không có nguồn mới); công trình mở theo tổng Sao,
      không tiêu, không mất; nhân vật chỉ vui/thư giãn; khu hỗ trợ luôn mở được từ HUD.
      ===================================================================== */
-  const game = { panel: null, arg: null, scroll: null, lastStars: null, opener: null, data: null, token: 0 }
+  const game = { panel: null, arg: null, scroll: null, lastStars: null, opener: null, data: null, token: 0, session: 0, entry: null }      // entry: chế độ đã chọn cho lần vào game này
   const GAME_ROUTES = ['village', 'tasks', 'pet', 'inventory']
   const isGameRoute = arg => GAME_ROUTES.includes(arg)
   const onGameKey = event => { if (event.key === 'Escape' && $('#gw-panel') && !$('#gw-panel').hidden) closePanel() }
   /** Rời game (đổi trang, đăng nhập lại, lỗi): dừng đồng hồ, gỡ phím tắt, giải phóng cảnh 3D (khi có) và hủy lần tải đang chờ. */
   function disposeGame() {
     game.token++
+    game.session++
+    game.entry = null                                // vào game lần sau sẽ hỏi lại 2D hay 3D
     clearInterval(taskTicker)
     document.removeEventListener('keydown', onGameKey)
+    window.WorldUI?.reset()
     window.World3D?.dispose?.()
+  }
+  /** Đổi giữa làng 2D và thế giới 3D: dựng lại khung từ đầu, không hỏi lại. */
+  function rebuildGame(mode) {
+    disposeGame()
+    game.entry = mode
+    $('#gw')?.remove()
+    gameView(null)
+  }
+
+  const OPTION_ART = {
+    light: '<svg viewBox="0 0 240 112" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges"><rect width="240" height="112" fill="#CFE8FF"/><rect y="68" width="240" height="44" fill="#9ED39A"/><rect y="68" width="240" height="5" fill="#7BBE7A"/><rect x="26" y="14" width="30" height="9" fill="#fff"/><rect x="34" y="8" width="16" height="6" fill="#fff"/><rect x="96" y="52" width="48" height="34" fill="#FFF6E8"/><path d="M88 54 120 28l32 26z" fill="#F59E8B"/><rect x="113" y="64" width="14" height="22" fill="#8E6248"/><rect x="101" y="60" width="9" height="9" fill="#BFE3FF"/><rect x="131" y="60" width="9" height="9" fill="#BFE3FF"/><rect x="186" y="62" width="8" height="26" fill="#8E6248"/><rect x="172" y="36" width="36" height="28" fill="#6FBF73"/><rect x="180" y="28" width="20" height="10" fill="#83CC80"/><rect x="62" y="66" width="14" height="12" fill="#F7D2B6"/><rect x="62" y="62" width="14" height="6" fill="#5B4636"/><rect x="61" y="78" width="16" height="14" fill="#8B7CF6"/><rect x="63" y="92" width="4" height="6" fill="#4C4F7A"/><rect x="71" y="92" width="4" height="6" fill="#4C4F7A"/></svg>',
+    '3d': '<svg viewBox="0 0 240 112" preserveAspectRatio="xMidYMid slice"><rect width="240" height="112" fill="#BBA8F5"/><rect x="24" y="16" width="30" height="8" fill="#fff" opacity=".9"/><rect x="190" y="26" width="26" height="7" fill="#fff" opacity=".8"/><polygon points="120,40 216,88 120,136 24,88" fill="#9ED39A"/><polygon points="24,88 120,136 120,148 24,100" fill="#C9A27E"/><polygon points="216,88 120,136 120,148 216,100" fill="#A9835F"/><polygon points="120,42 150,57 120,72 90,57" fill="#FFF6E8"/><polygon points="90,57 120,72 120,100 90,85" fill="#EADBC4"/><polygon points="150,57 120,72 120,100 150,85" fill="#D8C5A8"/><polygon points="120,28 156,46 120,64 84,46" fill="#F8B4A4"/><polygon points="84,46 120,64 120,72 84,54" fill="#F59E8B"/><polygon points="156,46 120,64 120,72 156,54" fill="#D97B69"/><polygon points="120,20 140,30 120,40 100,30" fill="#F8B4A4"/><polygon points="100,30 120,40 120,48 100,38" fill="#F59E8B"/><polygon points="140,30 120,40 120,48 140,38" fill="#D97B69"/><polygon points="62,56 71,60.5 62,65 53,60.5" fill="#B98563"/><polygon points="53,60.5 62,65 62,85 53,80.5" fill="#8E6248"/><polygon points="71,60.5 62,65 62,85 71,80.5" fill="#7A5340"/><polygon points="62,34 86,46 62,58 38,46" fill="#83CC80"/><polygon points="38,46 62,58 62,76 38,64" fill="#6FBF73"/><polygon points="86,46 62,58 62,76 86,64" fill="#4F9F58"/><polygon points="166,62 176,67 166,72 156,67" fill="#A79BFA"/><polygon points="156,67 166,72 166,85 156,80" fill="#8B7CF6"/><polygon points="176,67 166,72 166,85 176,80" fill="#6D5DD3"/><polygon points="166,53 174,57 166,61 158,57" fill="#FCE0C8"/><polygon points="158,57 166,61 166,69 158,65" fill="#F7D2B6"/><polygon points="174,57 166,61 166,69 174,65" fill="#E3B999"/><polygon points="166,50 175,54.5 166,59 157,54.5" fill="#7A6150"/><polygon points="157,54.5 166,59 166,62 157,57.5" fill="#5B4636"/><polygon points="175,54.5 166,59 166,62 175,57.5" fill="#46352A"/></svg>'
+  }
+
+  /** Màn chọn khi vào game. Hai chế độ dùng chung nhiệm vụ, Sao và nhân vật; khu hỗ trợ vẫn mở được ngay tại đây. */
+  function chooseView(payload, open, arg) {
+    const { today } = payload
+    const last = window.World3DSupport.getPreference()
+    app().className = 'app bare gw-app'
+    const option = (mode, name, text, beta) => `<button type="button" class="gw-option is-${mode}" data-mode="${mode}">
+      <span class="gw-option-art" aria-hidden="true">${OPTION_ART[mode]}</span><span class="gw-option-name"><b>${name}</b>${beta ? '<span class="gw-beta">BETA</span>' : ''}</span>
+      <span class="gw-option-text">${text}</span>${last === mode ? '<span class="gw-option-last">Lần trước bạn chọn</span>' : ''}</button>`
+    app().innerHTML = `<div class="gw-choose"><main class="gw-choose-box" aria-labelledby="gw-choose-title">
+      <h1 id="gw-choose-title">Chọn cách chơi</h1><p>Hai chế độ dùng chung nhiệm vụ, Sao và nhân vật. Bạn đổi lại lúc nào cũng được trong Cài đặt.</p>
+      <div class="gw-options">${option('light', 'Làng 2D', 'Ổn định, nhẹ máy, chạy tốt trên mọi thiết bị.')}
+        ${option('3d', 'Thế giới 3D', 'Đi dạo và khám phá bằng nhân vật của bạn. Đang thử nghiệm nên có thể còn lỗi và cần máy khỏe hơn.', true)}</div>
+      ${today.support ? `<details class="gw-choose-help"><summary>Bạn cần người đồng hành?</summary><p>${esc(today.support)}</p></details>` : ''}
+      <a class="gw-choose-exit" href="#/track">Về tiến triển của tôi</a></main></div>`
+    $$('.gw-option').forEach(button => button.onclick = () => {
+      game.entry = button.dataset.mode
+      window.World3DSupport.setPreference(game.entry)
+      // Dùng lại dữ liệu vừa tải: giới hạn tần suất tính theo IP, cả lớp có thể chung mạng. Để màn chọn quá lâu thì tải lại.
+      if (Date.now() - payload.fetchedAt > 120000) return gameView(open, arg)
+      showBoot()
+      const token = ++game.token
+      startGame(payload, open, arg, token).catch(error => gameFailed(error, token))
+    })
+    $(`.gw-option[data-mode="${last || 'light'}"]`)?.focus()
   }
   const GI = {
     quest: '<path d="M6 4h9l3 3v13H6z"/><path d="M9 10h6M9 14h6M9 18h4"/>',
@@ -316,7 +357,8 @@ const Tracking = (() => {
     heart: '<path d="M20.8 8.8c0 4.2-8.8 10-8.8 10s-8.8-5.8-8.8-10a4.5 4.5 0 0 1 8.8-1.2 4.5 4.5 0 0 1 8.8 1.2Z"/>',
     exit: '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
     house: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
-    flame: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>'
+    flame: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',
+    map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>'
   }
   const gi = (name, label = '') => `<svg class="gw-i" viewBox="0 0 24 24" aria-hidden="true"${label ? ` aria-label="${esc(label)}"` : ''}>${GI[name]}</svg>`
 
@@ -343,7 +385,7 @@ const Tracking = (() => {
     clearInterval(taskTicker)
     const keepScroll = $('#gw-world')?.scrollLeft
     if (keepScroll !== undefined) game.scroll = keepScroll
-    if (!$('#gw')) { app().className = 'app bare gw-app'; app().innerHTML = `<div class="gw gw-boot">${loadingBlock()}</div>` }
+    if (!$('#gw')) showBoot()
     const token = ++game.token                      // trang đổi hoặc có lần tải mới hơn thì bỏ kết quả cũ
     try {
       const [data, today, inv] = await Promise.all([
@@ -358,13 +400,30 @@ const Tracking = (() => {
           <a class="btn" href="#/track">${svg('trend')}Về tiến triển của tôi</a></section>`, { wide: true })
         return
       }
-      renderGame({ V, data, today, inv }, open, arg)
-    } catch (error) {
-      if (token !== game.token) return
-      if (error.status === 401) return loginView()
-      if (isLocked(error)) return lockedView()
-      frame(failBlock(error.message)); $('#tk-retry').onclick = () => gameView()
-    }
+      const payload = { V, data, today, inv, fetchedAt: Date.now() }
+      if (!game.entry) {
+        if (window.WorldUI?.canUse3d()) return chooseView(payload, open, arg)
+        game.entry = 'light'                                       // máy không chạy được 3D: vào thẳng làng 2D
+      }
+      await startGame(payload, open, arg, token)
+    } catch (error) { gameFailed(error, token) }
+  }
+
+  const showBoot = () => { app().className = 'app bare gw-app'; app().innerHTML = `<div class="gw gw-boot">${loadingBlock()}</div>` }
+
+  /** Dựng game theo chế độ đã chọn từ dữ liệu vừa tải (chỉ thế giới 3D cần thêm một lần gọi). */
+  async function startGame({ V, data, today, inv }, open, arg, token) {
+    const world = game.entry === '3d' ? await window.WorldUI.prepare() : null      // null: làng 2D
+    if (token !== game.token) return
+    if (!world) game.entry = 'light'
+    renderGame({ V, data, today, inv, world, unit: data.unit }, open, arg)
+  }
+
+  function gameFailed(error, token) {
+    if (token !== game.token) return
+    if (error.status === 401) return loginView()
+    if (isLocked(error)) return lockedView()
+    frame(failBlock(error.message)); $('#tk-retry').onclick = () => gameView()
   }
 
   function renderGame(ctx, open, arg) {
@@ -386,15 +445,19 @@ const Tracking = (() => {
     game.lastStars = data.stars
 
     app().className = 'app bare gw-app'
+    const is3d = Boolean(ctx.world)
+    if ($('#gw-ui') && $('#gw').classList.contains('is-3d') !== is3d) { game.session++; window.WorldUI?.reset(); window.World3D?.dispose(); $('#gw').remove() }
     const mounted = Boolean($('#gw-ui'))
-    if (!mounted) mountGame()
+    if (!mounted) mountGame(is3d)
     $('#gw').classList.toggle('is-night', night)
 
-    // Cảnh làng: vẽ lại nội dung, giữ nguyên khung (khung này sẽ chứa canvas 3D ở giai đoạn sau) và vị trí đang xem
+    // Cảnh: chế độ 2D vẽ lại SVG và giữ vị trí đang xem; chế độ 3D giữ nguyên canvas, chỉ cập nhật trạng thái
     const world = $('#gw-world')
-    const keep = mounted ? world.scrollLeft : game.scroll
-    world.innerHTML = V.scene({ ...data, avatar }, { night, fresh, interactive: true })
-    world.scrollLeft = keep ?? Math.max(0, (world.scrollWidth - world.clientWidth) / 2)
+    if (!is3d) {
+      const keep = mounted ? world.scrollLeft : game.scroll
+      world.innerHTML = V.scene({ ...data, avatar }, { night, fresh, interactive: true })
+      world.scrollLeft = keep ?? Math.max(0, (world.scrollWidth - world.clientWidth) / 2)
+    }
 
     $('#gw-ui').innerHTML = `
       <header class="gw-hud">
@@ -405,6 +468,7 @@ const Tracking = (() => {
           <div class="gw-xp" role="progressbar" aria-label="${next ? `Tiến độ tới ${esc(next.name)}` : 'Làng đã đủ công trình'}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><i style="width:${progress}%"></i></div>
           <small>${next ? `Sắp xây <b>${esc(next.name)}</b> · ${data.stars}/${next.stars} ${esc(unit.icon)}` : 'Làng đã đủ mọi công trình'}</small></div>
         <div class="gw-res">
+          ${is3d ? '<span class="gw-chip gw-beta-chip" title="Thế giới 3D đang thử nghiệm">3D <span class="gw-beta">BETA</span></span>' : ''}
           <span class="gw-chip${gained ? ' gw-pulse' : ''}" title="${esc(unit.name)} đã nhận"><span aria-hidden="true">${esc(unit.icon)}</span><b class="num">${data.stars}</b><span class="sr-only"> ${esc(unit.name)}</span>${gained ? `<span class="gw-gain" aria-hidden="true">+${gained}</span>` : ''}</span>
           <span class="gw-chip" title="Công trình đã xây"><span class="gw-chip-i">${gi('house')}</span><b class="num">${unlocked.length}/${V.BUILDINGS.length}</b><span class="sr-only"> công trình</span></span>
           ${today.streak ? `<span class="gw-chip" title="Chuỗi ngày (chỉ để khích lệ)"><span class="gw-chip-i">${gi('flame')}</span><b class="num">${today.streak.current}</b><span class="sr-only"> ngày liên tiếp</span></span>` : ''}
@@ -422,6 +486,7 @@ const Tracking = (() => {
         <button type="button" data-open="bag">${gi('bag')}<span>Túi đồ</span></button>
         <button type="button" data-open="hero">${gi('hero')}<span>Nhân vật</span></button>
         <button type="button" data-open="codex">${gi('book')}<span>Sổ làng</span></button>
+        ${is3d ? `<button type="button" data-open="map">${gi('map')}<span>Bản đồ</span></button>` : ''}
       </nav>`
 
     $$('#gw-ui [data-open]').forEach(button => button.onclick = () => openPanel(button.dataset.open, null, button))
@@ -429,19 +494,26 @@ const Tracking = (() => {
     if (fresh.size) toast(`Làng vừa có thêm: ${unlocked.filter(b => fresh.has(b.key)).map(b => b.name).join(', ')}`)
     if (open) openPanel(open, arg, null, { instant: true })
     else if (!$('#gw-panel').hidden) closePanel()
+    if (is3d) window.WorldUI.show(world)
   }
 
   /** Khung game chỉ dựng một lần cho mỗi lần vào game; sau đó chỉ cập nhật cảnh, HUD và nội dung bảng. */
-  function mountGame() {
-    app().innerHTML = `<div class="gw" id="gw">
-      <div class="gw-world" id="gw-world" aria-label="Thế giới làng nhỏ. Kéo để xem, nhấn vào công trình hoặc nhân vật."></div>
+  function mountGame(is3d = false) {
+    app().innerHTML = `<div class="gw${is3d ? ' is-3d' : ''}" id="gw">
+      <div class="gw-world" id="gw-world" aria-label="${is3d ? 'Thế giới 3D làng nhỏ' : 'Thế giới làng nhỏ. Kéo để xem, nhấn vào công trình hoặc nhân vật.'}"></div>
       <div class="gw-ui" id="gw-ui"></div>
+      ${is3d ? '<button type="button" class="gw-prompt" id="gw-prompt" hidden></button><p class="gw-keys" aria-hidden="true">WASD đi · Shift chạy · Space nhảy · E tương tác · chuột xoay camera (Esc thoát)</p>' : ''}
       <aside class="gw-panel" id="gw-panel" role="dialog" aria-modal="false" aria-labelledby="gw-panel-title" hidden>
         <header class="gw-panel-head"><h2 id="gw-panel-title"></h2><button type="button" class="gw-round" id="gw-panel-x" aria-label="Đóng">${gi('close')}</button></header>
         <div class="gw-panel-body" id="gw-panel-body"></div></aside>
     </div>`
 
-    // thế giới: kéo để xem (chuột), chạm thì cuộn tự nhiên
+    $('#gw-panel-x').onclick = closePanel
+    document.removeEventListener('keydown', onGameKey)
+    document.addEventListener('keydown', onGameKey)
+    if (is3d) return
+
+    // thế giới 2D: kéo để xem (chuột), chạm thì cuộn tự nhiên
     const world = $('#gw-world')
     let drag = null
     world.onpointerdown = event => { if (event.pointerType === 'mouse' && event.button === 0) drag = { x: event.clientX, left: world.scrollLeft, moved: false } }
@@ -458,9 +530,6 @@ const Tracking = (() => {
     }
     world.onclick = event => { if (drag?.moved) return; activate(event.target) }
     world.onkeydown = event => { if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[role=button]')) { event.preventDefault(); activate(event.target) } }
-    $('#gw-panel-x').onclick = closePanel
-    document.removeEventListener('keydown', onGameKey)
-    document.addEventListener('keydown', onGameKey)
   }
 
   function closePanel() {
@@ -470,7 +539,10 @@ const Tracking = (() => {
     $('#gw-panel-body').innerHTML = ''
     clearInterval(taskTicker)
     game.panel = null; game.arg = null
-    if (game.opener?.isConnected) game.opener.focus()
+    window.WorldUI?.onPanel(null)
+    // Ở thế giới 3D, nút gợi ý "E" không giữ tiêu điểm (nếu giữ, phím Space sẽ bấm lại nút thay vì nhảy)
+    if (game.opener?.isConnected && !game.opener.hidden && game.opener.id !== 'gw-prompt') game.opener.focus()
+    else window.World3D?.focusCanvas?.()
   }
 
   function openPanel(kind, arg, opener, { instant = false } = {}) {
@@ -522,6 +594,7 @@ const Tracking = (() => {
         if (animate) { bump(heroHit); bump(petHit) }
         const portrait = $('#gw .gw-portrait-img')
         if (portrait) portrait.innerHTML = V.avatarSvg(draft)
+        window.WorldUI?.preview(draft, selectedPet)
         $('#vl-parts').hidden = draft.preset !== 'default'
         $('#vl-preset-hint').hidden = draft.preset === 'default'
         $$('[data-part]', body).forEach(button => button.setAttribute('aria-pressed', String(draft[button.dataset.part] === Number(button.dataset.i))))
@@ -599,6 +672,8 @@ const Tracking = (() => {
           return `<li><button type="button" class="gw-codex-row${open ? '' : ' is-soon'}${isNext ? ' is-next' : ''}" data-building-open="${b.key}"><span class="gw-codex-main"><b>${esc(b.name)}</b><small>${open ? esc(teaser(b.about)) : isNext ? `Tiếp theo · còn ${b.stars - data.stars} ${esc(unit.icon)}` : `Mở ở ${b.stars} ${esc(unit.icon)}`}</small></span><span class="gw-codex-state">${open ? (done ? `Đã làm ${done} lần` : 'Đã xây') : 'Chờ xây'}</span></button></li>`
         }).join('')}</ul>`
       $$('[data-building-open]', body).forEach(button => button.onclick = () => openPanel('building', button.dataset.buildingOpen, button))
+    } else if (window.WorldUI?.panel(kind, arg, body, title)) {
+      if (game.panel !== kind) return                       // bảng tự đóng (không dùng được ở chế độ này)
     } else if (kind === 'support') {
       title.textContent = 'Bạn cần người đồng hành?'
       body.innerHTML = `${support || '<p class="tk-hint">Chưa có thông tin hỗ trợ.</p>'}<p class="tk-hint">Bạn không cần chờ đến khi mọi chuyện tệ hơn mới tìm sự giúp đỡ.</p>`
@@ -621,9 +696,11 @@ const Tracking = (() => {
       })
       $('#gw-notify-off', body)?.addEventListener('click', () => { try { localStorage.removeItem('brainst0rm-reminder-notifications') } catch { /* bỏ qua */ } gameView('settings') })
     }
+    window.WorldUI?.extend(kind, body)
     $$('[data-goto]', body).forEach(button => button.onclick = () => openPanel(button.dataset.goto, null, button))
     panel.hidden = false; $('#gw').classList.add('has-panel')
     panel.classList.toggle('no-anim', instant)
+    window.WorldUI?.onPanel(kind)
     if (!instant) $('#gw-panel-x').focus()
   }
 
@@ -1234,6 +1311,8 @@ const Tracking = (() => {
       try { await api('PUT', `${url}/${encodeURIComponent(task.id)}`, { is_active: !task.is_active }); loadSchedule(surveyId) } catch (error) { restore(); toast(error.message) }
     })
   }
+
+  window.WorldUI?.connect({ game, openPanel: (...args) => openPanel(...args), closePanel: () => closePanel(), rebuild: mode => rebuildGame(mode), tapi })
 
   return { context, introHtml, wantsTrack, bandHtml, doneHtml, wireDone, participantRoute, configView, isGameRoute, disposeGame }
 })()

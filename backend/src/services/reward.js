@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
+import { describeWorld, findWorldItem, isGuardianAwake, isMapOpen } from './world3d-content.js'
 
 /**
  * Reward system — giai đoạn 2: nhiệm vụ nạp từ dữ liệu, sổ điểm chỉ-ghi-thêm, trần điểm ngày/tuần.
@@ -16,7 +17,7 @@ export const PET_SPECIES = ['cat', 'bunny', 'fox', 'bear']
 export const REWARD_GAMES = ['breathing', 'rest_timer', 'three_plans']
 export const DEFAULT_SETTINGS = {
   unit_name: 'Sao', unit_icon: '⭐', daily_cap: 50, weekly_cap: 250, cycle_days: 14, timezone: 'Asia/Ho_Chi_Minh',
-  rest_cards_per_week: 2, streak_enabled: false,
+  rest_cards_per_week: 2, streak_enabled: false, world3d_enabled: false,
   group_labels: { green: 'Gói Duy trì', yellow: 'Gói Cân bằng', red: 'Gói Đồng hành' }
 }
 const MISSING = ['42P01', 'PGRST205', 'PGRST204']
@@ -258,10 +259,18 @@ export function normalizeSettings(input, existing = DEFAULT_SETTINGS) {
     daily_cap: integer(merged.daily_cap, 'Trần điểm mỗi ngày', 1, 1000), weekly_cap: integer(merged.weekly_cap, 'Trần điểm mỗi tuần', 1, 5000),
     cycle_days: integer(merged.cycle_days, 'Chu kỳ đánh giá (ngày)', 1, 365), group_labels: labels,
     rest_cards_per_week: integer(merged.rest_cards_per_week ?? 2, 'Số Thẻ nghỉ mỗi tuần', 0, 7),
-    streak_enabled: merged.streak_enabled === true
+    streak_enabled: merged.streak_enabled === true,
+    world3d_enabled: merged.world3d_enabled === true
   }
   if (row.weekly_cap < row.daily_cap) throw new HttpError(400, 'Trần tuần không được nhỏ hơn trần ngày')
   return row
+}
+
+const WORLD_MIGRATION_HINT = 'Chạy backend/migrations/023_world3d.sql để bật thế giới 3D và sưu tầm'
+const worldMissing = result => ['42P01', 'PGRST205'].includes(result?.error?.code) || result?.error?.code === 'PGRST204' && /world3d_enabled/i.test(result.error.message || '')
+function worldResult(result) {
+  if (worldMissing(result)) throw new HttpError(503, WORLD_MIGRATION_HINT)
+  return rewardResult(result)
 }
 
 /* ---------------------------------------------------------------------- service */
@@ -279,7 +288,7 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
   async function getSettings() {
     const row = q(await db.from('reward_settings').select('*').eq('id', 'global').maybeSingle())
     return {
-      ...DEFAULT_SETTINGS, ...(row || {}), streak_available: Object.hasOwn(row || {}, 'streak_enabled'),
+      ...DEFAULT_SETTINGS, ...(row || {}), streak_available: Object.hasOwn(row || {}, 'streak_enabled'), world3d_available: Object.hasOwn(row || {}, 'world3d_enabled'),
       group_labels: { ...DEFAULT_SETTINGS.group_labels, ...(row?.group_labels || {}) }
     }
   }
@@ -287,15 +296,19 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
   async function saveSettings(input, userId) {
     const current = await getSettings()
     const normalized = normalizeSettings(input, current)
-    const { rest_cards_per_week, streak_enabled, ...baseSettings } = normalized
+    const { rest_cards_per_week, streak_enabled, world3d_enabled, ...baseSettings } = normalized
+    // Chỉ ghi cột của migration 023 khi người dùng gửi, để lưu cấu hình cũ không phụ thuộc migration mới
+    const includesWorld = Object.hasOwn(input || {}, 'world3d_enabled')
     const includesStreakSettings = Object.hasOwn(input || {}, 'rest_cards_per_week') || Object.hasOwn(input || {}, 'streak_enabled')
     const row = {
       ...baseSettings,
       ...(includesStreakSettings ? { rest_cards_per_week, streak_enabled } : {}),
+      ...(includesWorld ? { world3d_enabled } : {}),
       updated_by: userId, updated_at: now().toISOString()
     }
     const existing = q(await db.from('reward_settings').select('id').eq('id', 'global').maybeSingle())
     const write = existing ? await db.from('reward_settings').update(row).eq('id', 'global') : await db.from('reward_settings').insert({ id: 'global', ...row })
+    if (includesWorld && worldMissing(write)) worldResult(write)
     if (includesStreakSettings) streakResult(write)
     else q(write)
     return getSettings()
@@ -417,6 +430,45 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
       completions: rows.length, activeDays: new Set(rows.map(row => row.local_date)).size, tasks,
       unit: { name: settings.unit_name, icon: settings.unit_icon }
     }
+  }
+
+  /* ---- thế giới 3D (migration 023): kho báu và kỷ vật chỉ để sưu tầm, không bao giờ liên quan đến Sao ---- */
+  const readFound = async profileId => db.from('reward_world_items').select('item_key').eq('profile_id', profileId)
+
+  async function world(profileId) {
+    const settings = await getSettings()
+    const progress = await village(profileId)
+    const read = await readFound(profileId)
+    const available = !worldMissing(read)
+    const found = new Set(available ? rewardResult(read).map(row => row.item_key) : [])
+    const enabled = settings.world3d_enabled === true
+    return {
+      enabled, collecting: available && enabled,
+      stars: progress.stars, completions: progress.completions,
+      maps: describeWorld(progress.stars, progress.completions, found)
+    }
+  }
+
+  /** Ghi nhận một vật phẩm đã nhặt hoặc kỷ vật sau khi làm trùm dịu lại. Gửi lặp trả duplicate, không tạo thêm gì.
+   *  Máy chủ không xác minh thao tác trong game (chỉ là đồ sưu tầm), nhưng vẫn kiểm tra điều kiện mở. */
+  async function collect(profileId, key) {
+    const found = new Set(worldResult(await readFound(profileId)).map(row => row.item_key))
+    const settings = await getSettings()
+    const group = await groupFor(profileId, settings)
+    if (!group?.enabled) throw new HttpError(403, 'Hệ thống nhiệm vụ chưa được bật cho hồ sơ này')
+    if (settings.world3d_enabled !== true) throw new HttpError(403, 'Thế giới 3D đang tắt')
+    const entry = typeof key === 'string' ? findWorldItem(key) : null
+    if (!entry) throw new HttpError(404, 'Không tìm thấy vật phẩm')
+    const answer = duplicate => ({ duplicate, key, name: entry.kind === 'keepsake' ? entry.item.keepsake : entry.item.name, kind: entry.kind })
+    if (found.has(key)) return answer(true)
+    const progress = await village(profileId)
+    if (!isMapOpen(entry.map, progress.stars, found)) throw new HttpError(409, 'Bản đồ này chưa mở')
+    if (entry.kind === 'keepsake' && !isGuardianAwake(entry.map, progress.stars, progress.completions, found))
+      throw new HttpError(409, `${entry.map.guardian.name} vẫn đang ngủ`)
+    const inserted = await db.from('reward_world_items').insert({ profile_id: profileId, item_key: key, found_at: now().toISOString() })
+    if (inserted.error?.code === '23505') return answer(true)
+    worldResult(inserted)
+    return answer(false)
   }
 
   async function equip(profileId, input = {}) {
@@ -641,6 +693,6 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
 
   return {
     getSettings, saveSettings, listTasks, createTask, updateTask, listSurveyTasks, createSurveyTask, updateSurveyTask, listItems, createItem, updateItem,
-    today, start, cancelStart, complete, useRestCard, inventory, village, equip, setReminders, groupFor
+    today, start, cancelStart, complete, useRestCard, inventory, village, world, collect, equip, setReminders, groupFor
   }
 }

@@ -108,9 +108,9 @@
     "semantic_hash": "6d857a4a54ff0bdd17b726c70ca0a3c7"
   },
   "backend/src/routes/index.js": {
-    "mtime": 1795273064.271492,
-    "seen": 1795275669.525721,
-    "ast_hash": "6f7d8458fb7921e7e7945f33544b5545",
+    "mtime": 1795707286.0287936,
+    "seen": 1795708289.654472,
+    "ast_hash": "b074f07bf91ccd95c08b5d5d857cb577",
     "semantic_hash": ""
   },
   "backend/src/services/csv-export.js": {
@@ -192,9 +192,9 @@
     "semantic_hash": "83fdd6af9717f8044e2c37ffc01b1c72"
   },
   "frontend/js/app.js": {
-    "mtime": 1795705919.167404,
-    "seen": 1795706048.349272,
-    "ast_hash": "ff24b261ffc76b63030e30e67f84d5a0",
+    "mtime": 1795708826.4923828,
+    "seen": 1795709200.1014855,
+    "ast_hash": "bce57f196551dac405261024d4e68d3f",
     "semantic_hash": ""
   },
   "frontend/js/ui.js": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "frontend/index.html": {
-    "mtime": 1795705919.167404,
-    "seen": 1795706048.3495946,
-    "ast_hash": "1e5f6c3c2b3545b44f83fb43ddb60e2e",
+    "mtime": 1795707684.7726662,
+    "seen": 1795708289.655683,
+    "ast_hash": "0f08360b4c92aa5446bf01d82ccf2c36",
     "semantic_hash": ""
   },
   "none.md": {
@@ -294,9 +294,9 @@
     "semantic_hash": "0b42f7d56c5e630962271fc5d85ba2ba"
   },
   "backend/test/helpers/fake-db.js": {
-    "mtime": 1795273221.582776,
-    "seen": 1795275669.526676,
-    "ast_hash": "8367bdd4a8734cda3569eb0f8cc18bc9",
+    "mtime": 1795707286.0217936,
+    "seen": 1795708289.6550326,
+    "ast_hash": "933bb0b5aa512fcbf3e10a8f96f3807e",
     "semantic_hash": ""
   },
   "backend/test/tracking-access.test.js": {
@@ -330,9 +330,9 @@
     "semantic_hash": "9d9375869bbd317755598494172895d1"
   },
   "frontend/js/tracking.js": {
-    "mtime": 1795705919.164404,
-    "seen": 1795706048.3493414,
-    "ast_hash": "186f6b6bd3e04e49bb489266fa9a29ec",
+    "mtime": 1795709316.452302,
+    "seen": 1795709358.9482286,
+    "ast_hash": "569f25fec76721e541790c6cc8312394",
     "semantic_hash": ""
   },
   "design-spec-cozy-purple.md": {
@@ -432,9 +432,9 @@
     "semantic_hash": "fb029baebf053e9bd65b3bd7642a4e98"
   },
   "backend/src/controllers/rewards.js": {
-    "mtime": 1795273064.2704918,
-    "seen": 1795275669.5255241,
-    "ast_hash": "03242a81d3439198305a561b0a02d562",
+    "mtime": 1795707286.0217936,
+    "seen": 1795708289.6543782,
+    "ast_hash": "6edd9394a155cff89e4a6afd3a9b8886",
     "semantic_hash": ""
   },
   "backend/src/services/reward-seed-tasks.js": {
@@ -444,9 +444,9 @@
     "semantic_hash": "1109915929e1d7f8f32c3e96843f8666"
   },
   "backend/src/services/reward.js": {
-    "mtime": 1795328534.4070323,
-    "seen": 1795329296.0950408,
-    "ast_hash": "7b110ccbc21dd3666bfb34253b75bfea",
+    "mtime": 1795708826.4933827,
+    "seen": 1795709200.1006782,
+    "ast_hash": "b9b985042fe444fc6ee72abd401d5482",
     "semantic_hash": ""
   },
   "backend/test/reward.test.js": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795706192.8722796,
-    "seen": 1795706216.40921,
-    "ast_hash": "391fc374d197da1468f8717b22047e16",
+    "mtime": 1795709197.9943216,
+    "seen": 1795709200.1018207,
+    "ast_hash": "e394d9a39923fd1391b623ce23dd56fd",
     "semantic_hash": ""
   },
   "docs/answer.md": {
@@ -504,9 +504,9 @@
     "semantic_hash": "805a0422dc8f3aad42f086764aafdcd0"
   },
   "frontend/js/village.js": {
-    "mtime": 1795337664.4906502,
-    "seen": 1795342725.0733275,
-    "ast_hash": "759af8365160d2f75c0aa6f5624dbf11",
+    "mtime": 1795707558.4097054,
+    "seen": 1795708289.655472,
+    "ast_hash": "2cebbc5cbcf419fb2a7f9e490421fe4f",
     "semantic_hash": ""
   },
   "backend/scripts/seed-demo-study.js": {
@@ -532,12 +532,6 @@
     "seen": 1795251344.5032578,
     "ast_hash": "548ccd3b9af4def0d22f21ff13af1686",
     "semantic_hash": "548ccd3b9af4def0d22f21ff13af1686"
-  },
-  "tomorrow.md": {
-    "mtime": 1795195200.3883524,
-    "seen": 1795195475.3189101,
-    "ast_hash": "29b3044c6d2bc50128e8cc2fdb57f28a",
-    "semantic_hash": ""
   },
   "backend/migrations/010_reward_streaks.sql": {
     "mtime": 1795171922.1756537,
@@ -600,15 +594,15 @@
     "semantic_hash": ""
   },
   "docs/implementation-log.md": {
-    "mtime": 1795706215.7952693,
-    "seen": 1795706216.4093466,
-    "ast_hash": "7f5851da8c454ebe907859abb5658796",
+    "mtime": 1795709357.910295,
+    "seen": 1795709358.9487355,
+    "ast_hash": "7efa217f5e9047d7a8b8691ceacff716",
     "semantic_hash": ""
   },
   "docs/reward-roadmap.md": {
-    "mtime": 1795706043.7823474,
-    "seen": 1795706048.3495297,
-    "ast_hash": "9f83b343eda42e7a01271f6d95c5d418",
+    "mtime": 1795709198.0023215,
+    "seen": 1795709200.101936,
+    "ast_hash": "89b2ba53572e277b7b57f5299f49782c",
     "semantic_hash": ""
   },
   "backend/test/survey-question-time-http.test.js": {
@@ -630,27 +624,117 @@
     "semantic_hash": ""
   },
   "backend/test/world3d-foundation.test.js": {
-    "mtime": 1795705959.3393857,
-    "seen": 1795706048.3492477,
-    "ast_hash": "1cac7ed16369542b0625fa733c814be7",
+    "mtime": 1795708826.4933827,
+    "seen": 1795709200.1014602,
+    "ast_hash": "8277de2e102fa8be0f4de65d0421ed10",
     "semantic_hash": ""
   },
   "frontend/js/world-support.js": {
-    "mtime": 1795705959.3203857,
-    "seen": 1795706048.3493865,
-    "ast_hash": "76ad767ef09c127acfd9922393134248",
-    "semantic_hash": ""
-  },
-  "curplan.md": {
-    "mtime": 1795705867.0994277,
-    "seen": 1795706048.3494866,
-    "ast_hash": "239d47a29b565324c3048ec07aa519f7",
+    "mtime": 1795708826.4803827,
+    "seen": 1795709200.101598,
+    "ast_hash": "2481b17ac3655825bf8e45ff7274a237",
     "semantic_hash": ""
   },
   "docs/world3d-plan.md": {
-    "mtime": 1795706043.7663474,
-    "seen": 1795706048.3495731,
-    "ast_hash": "acd51b1d05b03fc02f0c26508deec838",
+    "mtime": 1795709316.452302,
+    "seen": 1795709358.9487965,
+    "ast_hash": "d29b65c7ef51cf0aaadb5f40a62e5dc3",
+    "semantic_hash": ""
+  },
+  "backend/src/services/world3d-content.js": {
+    "mtime": 1795707278.834797,
+    "seen": 1795708289.6549237,
+    "ast_hash": "6a227935c4fdaea9fe1ab33c46f85d44",
+    "semantic_hash": ""
+  },
+  "backend/test/world3d-client.test.js": {
+    "mtime": 1795707731.9726515,
+    "seen": 1795708289.6553571,
+    "ast_hash": "f31601512a12ef3cc4e1604deb2aa411",
+    "semantic_hash": ""
+  },
+  "backend/test/world3d.test.js": {
+    "mtime": 1795708826.4933827,
+    "seen": 1795709200.1014621,
+    "ast_hash": "dac5407d64e1ac7fed3e84b9a87ddc22",
+    "semantic_hash": ""
+  },
+  "frontend/js/world-ui.js": {
+    "mtime": 1795708826.4883828,
+    "seen": 1795709200.1015992,
+    "ast_hash": "ac08bf32fd5f90eb13316a2623b145d5",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/engine.js": {
+    "mtime": 1795708826.4873827,
+    "seen": 1795709200.1016004,
+    "ast_hash": "00d37b9cbf2c20417de0d3d88a14354d",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/index.js": {
+    "mtime": 1795708826.4873827,
+    "seen": 1795709200.1016018,
+    "ast_hash": "3f144b8e709a942a29aea33f8c719d6d",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/input.js": {
+    "mtime": 1795708906.0303695,
+    "seen": 1795709200.101603,
+    "ast_hash": "13d7062791904607607e88890b4abe82",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/logic.js": {
+    "mtime": 1795707451.2397387,
+    "seen": 1795708289.6554797,
+    "ast_hash": "dc95059fc565ef64c528166e24e63b96",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/maps/forest.js": {
+    "mtime": 1795707844.2546167,
+    "seen": 1795708289.6554809,
+    "ast_hash": "582d9fad8d969718a86b1867b59f0b45",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/maps/index.js": {
+    "mtime": 1795707451.4417388,
+    "seen": 1795708289.6554818,
+    "ast_hash": "039afa7bcface19a827811b41309f656",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/maps/meadow.js": {
+    "mtime": 1795707844.2466166,
+    "seen": 1795708289.6554828,
+    "ast_hash": "c002f91ae7c1ee14f4fdba49ea09a683",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/maps/sky.js": {
+    "mtime": 1795707986.7885723,
+    "seen": 1795708289.6554842,
+    "ast_hash": "1ab82f71b360951cbbf3f79b7cee2c7b",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/package.json": {
+    "mtime": 1795707731.9646516,
+    "seen": 1795708289.6554852,
+    "ast_hash": "a8ff303f9dfceb21d9cce40d8542fc20",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/scene.js": {
+    "mtime": 1795707558.5117054,
+    "seen": 1795708289.655486,
+    "ast_hash": "82688da9485ab776b42308d59a8ac12b",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/voxel.js": {
+    "mtime": 1795707451.4607387,
+    "seen": 1795708289.6554873,
+    "ast_hash": "5a3e7d95556c58e4b3fe7137d0a95206",
+    "semantic_hash": ""
+  },
+  "frontend/js/world3d/world.js": {
+    "mtime": 1795707451.3607388,
+    "seen": 1795708289.6554883,
+    "ast_hash": "2951b7f89aceab6581f6cbfbd8f68528",
     "semantic_hash": ""
   },
   "backend/package-lock.json": {

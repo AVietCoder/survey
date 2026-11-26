@@ -105,3 +105,7 @@ export async function updateSurveyTask(req, res) {
   await logActivity(req, 'reward.survey_task_update', { type: 'survey', id: survey.id, label: survey.title }, { task: task.code, fields: Object.keys(req.body || {}), active: task.is_active })
   res.json({ task })
 }
+
+/* ---- thế giới 3D: đọc trạng thái và ghi nhận vật phẩm sưu tầm (migration 023) */
+export async function world(req, res) { noStore(res).json(await reward.world(req.tracker.profileId)) }
+export async function collectWorld(req, res) { noStore(res).json(await reward.collect(req.tracker.profileId, req.body?.key)) }

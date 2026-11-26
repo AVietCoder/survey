@@ -296,5 +296,7 @@
   window.Village = { MECHANISMS, BUILDINGS, AVATAR_PARTS, DEFAULT_AVATAR, CHARACTER_PRESETS, cleanAvatar, avatarSvg,
     // Chỉ phần thân: dùng để đổi nhân vật/thú cưng tại chỗ, không dựng lại cả cảnh làng (nhanh hơn nhiều).
     heroMarkup: avatar => heroBody(avatar), companionMarkup: species => companionBody(species),
+    // Hình công trình [rộng, cao, svg] và màu tóc: thế giới 3D đùn đúng các hình này thành khối.
+    buildingMarkup: key => SPRITES[key]?.(), hairColor: avatar => AVATAR_PARTS.hair.colors[cleanAvatar(avatar).hair],
     scene, unlockedOf, nextOf, levelOf, greeting, mechanismFor: code => MECHANISMS[code] || '' }
 })()

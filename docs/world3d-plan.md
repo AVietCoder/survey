@@ -87,6 +87,8 @@ Routes: `GET /api/track/rewards/world`, `POST /api/track/rewards/world/collect`,
 
 Before Phase 3 the 3D game needs no backend change; it is switched on with a local preview flag (`?world=3d`).
 
+> **Update 2026-11-26 (project owner):** the `?world=3d` preview flag is gone. Every student whose device supports WebGL2 chooses "Làng 2D" or "Thế giới 3D (beta)" on entering the game; 2D is used unless they choose 3D. The admin switch `world3d_enabled` now only enables collecting. This replaces the "3D off by default" parts of this plan.
+
 ## 7. Risks
 
 | Risk | Handling |

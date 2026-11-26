@@ -121,3 +121,21 @@ Tách ra từ `CLAUDE.md`. Mỗi mục: đã làm gì, file/migration, cách ki�
 - Test: `test/world3d-foundation.test.js` (6: computeStreak, Thẻ nghỉ, mở khóa, cancelStart/village, chọn chế độ, tải thư viện); `npm test` 216/216. Trình duyệt (Firefox + DB giả): hoàn thành việc trong bảng giữ nguyên khung và cập nhật Sao; đổi route trong game; Esc; rời game; rời khi đang tải; `/vendor` trả đúng MIME; không lỗi JS; 390px không tràn.
 - **Chưa kiểm chứng:** triển khai Vercel có phục vụ `/vendor/*.js` đúng hay không (cần bản preview của chủ dự án); test không tốn công đo tốc độ khung hình.
 - Hồi quy ngắn: mở khảo sát công khai và sang câu 1, `#/track`, `#/track/login`, trang đăng nhập nhà nghiên cứu: không lỗi JS (chưa chạy lại hành trình nộp bài, theo dõi tiến triển và các trang nhà nghiên cứu sau đăng nhập). Thêm `.graphifyignore` loại `frontend/vendor/`.
+
+#### Game 3D, giai đoạn 1–5 (2026-11-26)
+
+- Vercel: `https://brainst0rm-exe.vercel.app/vendor/three/*.js` trả 200 `application/javascript` (chỉ đọc bằng HEAD).
+- Frontend: `world3d/` (`logic`, `world`, `maps/*`, `voxel`, `scene`, `input`, `engine`, `index`), `world-ui.js` (bản đồ, trùm, nhân vật phụ, màn chính, sưu tầm, thành tích, chọn chế độ/chất lượng), nối vào `tracking.js`; CSS ở cuối `game.css`. 3 bản đồ (đồng cỏ, rừng đèn lồng, hồ trên mây), đi/chạy/nhảy, WASD/mũi tên/E/Q/R, kéo xoay camera, cần gạt và nút nhảy cho cảm ứng. 3 trùm không thể thua: thở theo nhịp, thắp đèn từ nhỏ đến lớn, gom đốm sương.
+- Backend: migration `023_world3d.sql` (`world3d_enabled`, `reward_world_items`), `services/world3d-content.js`, `reward.world()/collect()`, `GET|POST /api/track/rewards/world[/collect]`, `village()` trả `world3d`; công tắc ở `#/admin/rewards`.
+- Test: `npm test` 233/233 (thêm `world3d.test.js` 9, `world3d-client.test.js` 8). Firefox headless có WebGL (Intel) + DB giả: đi/nhảy, E mở bảng, hoàn thành việc giữ nguyên canvas và cập nhật Sao, nhặt đồ, 3 trùm, đổi bản đồ, 2D↔3D, đổi route 4 lần (tối đa 1 canvas, rời game còn 0), 390/320/820 không tràn, nút ≥44px, cần gạt, giảm chuyển động, không WebGL → 2D, tắt → 2D và không tải three.js, xem thử khi tắt, tải thư viện lỗi → 2D, công tắc admin, nộp khảo sát, các trang nhà nghiên cứu: không lỗi JS. Khoảng 85–110 lệnh vẽ, ≤40k tam giác.
+- **Chưa kiểm chứng:** tốc độ khung hình và cảm ứng trên máy/điện thoại thật, Safari; migration 023 chưa chạy trên Supabase thật.
+- Không làm: âm thanh; thu nhỏ three.js (gói 0.187 không kèm bản .min). Nhiệm vụ không gắn được với trùm theo mã (nhiệm vụ khảo sát có mã sinh tự động) nên cổng dùng Sao và số việc đã làm.
+- Sửa: nhặt đồ lưu lỗi (vd 429) thì món đồ hiện lại, bước ra rồi vào lại để thử. Rủi ro còn lại: giới hạn 60 lần/15 phút của `/world/collect` tính theo IP nên cả lớp chung mạng có thể chạm giới hạn.
+
+#### Chuột điều khiển camera và màn chọn 2D / 3D beta (2026-11-26)
+
+- Yêu cầu chủ dự án. **Thay đổi quyết định cũ "3D mặc định tắt":** mọi học sinh có WebGL2 được chọn Làng 2D hoặc Thế giới 3D (BETA) mỗi lần vào game (đánh dấu lựa chọn lần trước, lưu trên thiết bị). Không ai bị chuyển sang 3D nếu không chọn. `?world=3d` không còn tác dụng. Công tắc admin giờ chỉ bật sưu tầm; không còn cách tắt hẳn 3D từ trang admin.
+- Chuột (`world3d/input.js`): bấm vào cảnh để khóa con trỏ và rê để xoay; Esc (trình duyệt) hoặc mở bảng thì nhả; nút "Chơi" ở màn chào cũng khóa; không khóa được thì kéo chuột; cảm ứng giữ cách cũ. Góc nhìn dọc nới 0.1–1.2.
+- Bỏ trường `world3d` trong `GET village`. Nhãn "3D BETA" trên HUD.
+- Kiểm tra: `npm test` 233/233; Firefox headless: màn chọn (390px không tràn), khóa chuột thật sau cú bấm, rê chuột xoay camera, E/mở bảng nhả chuột, kéo dự phòng, rời game nhả, chọn lại, đổi trong Cài đặt không hỏi lại, đường `#/track/tasks`, không WebGL → 2D, hành trình 3D đầy đủ. **Chưa kiểm chứng:** phím Esc nhả chuột (trình duyệt headless không xử lý phím Esc giả), độ nhạy chuột trên máy thật, Safari.
+- Màn chọn dùng lại dữ liệu vừa tải (không gọi lại village/today/inventory; quá 2 phút mới tải lại), chỉ 3D gọi thêm `/world`. Ghi chú đã thêm vào `docs/world3d-plan.md`.

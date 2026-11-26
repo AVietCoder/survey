@@ -89,16 +89,14 @@ function loadSupport() {
   return window.World3DSupport
 }
 
-test('world mode: 3D is off unless previewed, and falls back to light mode by choice or without WebGL2', () => {
+test('world mode: the player chooses; nobody is moved to 3D without choosing, and no WebGL2 means light mode', () => {
   const support = loadSupport()
-  const mode = input => support.chooseMode(input).reason
-  assert.equal(mode({ preview: false, webgl2: true }), 'preview-off')
-  assert.equal(mode({ preview: true, webgl2: true, preference: 'light' }), 'user-choice')
-  assert.equal(mode({ preview: true, webgl2: false }), 'no-webgl2')
-  assert.equal(support.chooseMode({ preview: true, webgl2: true, preference: null }).mode, '3d')
-  assert.equal(support.previewRequested({ search: '?world=3d', hash: '' }), true)
-  assert.equal(support.previewRequested({ search: '', hash: '#/track/village?world=3d' }), true)
-  assert.equal(support.previewRequested({ search: '?world=3dx', hash: '#/track' }), false)
+  const pick = input => support.chooseMode(input)
+  assert.deepEqual([pick({ webgl2: true, choice: null }).mode, pick({ webgl2: true, choice: null }).reason], ['light', 'not-chosen'])
+  assert.equal(pick({ webgl2: true, choice: 'light' }).reason, 'user-choice')
+  assert.equal(pick({ webgl2: true, choice: '3d' }).mode, '3d')
+  assert.deepEqual([pick({ webgl2: false, choice: '3d' }).mode, pick({ webgl2: false, choice: '3d' }).reason], ['light', 'no-webgl2'])
+  assert.equal(support.getPreference(), null, 'không có storage thì coi như chưa chọn')
 })
 
 test('vendored three.js loads, matches the pinned revision, and a failed load answers null and can be retried', async () => {

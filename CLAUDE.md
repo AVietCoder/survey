@@ -21,7 +21,7 @@ node scripts/seed-demo-study.js --user <username> [--dry-run]   # nghiên cứu 
 ```
 
 - Cần `backend/.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `IP_SALT`. Tùy chọn: `TRACKING_TOKEN_SECRET` (mặc định dùng `JWT_SECRET`; đổi khóa làm mất mọi cookie/mã khôi phục), `ALLOW_REGISTRATION=true` (mặc định **tắt** đăng ký công khai, admin tạo tài khoản).
-- Migration là SQL thuần trong `backend/migrations/` (001 → 013, 018, 019, 020, 021; 014–017 dành cho lộ trình giai đoạn 5–8), **chạy tay** trong Supabase SQL Editor, chỉ thêm mới, không sửa file đã áp dụng. Migration chưa chạy thì tính năng tương ứng trả HTTP 503 kèm gợi ý, phần còn lại vẫn chạy.
+- Migration là SQL thuần trong `backend/migrations/` (001 → 013, 018 → 023; 014–017 dành cho lộ trình giai đoạn 5–8), **chạy tay** trong Supabase SQL Editor, chỉ thêm mới, không sửa file đã áp dụng. Migration chưa chạy thì tính năng tương ứng trả HTTP 503 kèm gợi ý, phần còn lại vẫn chạy.
 - `backend/.env.example` đang được git theo dõi và có vẻ chứa giá trị thật: không in ra, nên xoay khóa và thay bằng placeholder.
 
 ## Kiến trúc
@@ -40,7 +40,7 @@ node scripts/seed-demo-study.js --user <username> [--dry-run]   # nghiên cứu 
 
 **Nhật ký hoạt động** (`services/activity.js`, migration 007): `logActivity` **không bao giờ ném lỗi**, không lưu mật khẩu/token, IP chỉ băm. Chỉ admin xem (`/api/admin/activity`).
 
-**Frontend**: `index.html` nạp `style.css` (layout cũ) → `cozy.css` (theme "Cozy Purple" ghi đè) → `components.css` (lớp component dùng chung) → `tracking.css` (tiền tố `.tk-`) → `game.css`; `ui.js` → `components.js` → `pet.js` → `games.js` → `village.js` → `world-support.js` → `tracking.js` → `app.js` (thứ tự bắt buộc). Thư viện 3D ở `frontend/vendor/` chỉ tải khi cần (`World3DSupport.loadEngine`); kế hoạch game 3D: `docs/world3d-plan.md`. Giao diện người tham gia (`#/s/<slug>`, `#/track…`) không cần đăng nhập.
+**Frontend**: `index.html` nạp `style.css` (layout cũ) → `cozy.css` (theme "Cozy Purple" ghi đè) → `components.css` (lớp component dùng chung) → `tracking.css` (tiền tố `.tk-`) → `game.css`; `ui.js` → `components.js` → `pet.js` → `games.js` → `village.js` → `world-support.js` → `world-ui.js` → `tracking.js` → `app.js` (thứ tự bắt buộc). Thư viện 3D ở `frontend/vendor/` chỉ tải khi cần (`World3DSupport.loadEngine`); kế hoạch game 3D: `docs/world3d-plan.md`. Giao diện người tham gia (`#/s/<slug>`, `#/track…`) không cần đăng nhập.
 
 ## Những cạm bẫy đã gặp
 
@@ -48,6 +48,7 @@ node scripts/seed-demo-study.js --user <username> [--dry-run]   # nghiên cứu 
 - **Học sinh không có nhiệm vụ = không có mức điểm**: nhóm lấy từ `tracking_sessions.band`; phiên `incomplete` (score null) thì band null → `today()` trả `enabled:false`. Nguyên nhân đã gặp ở PSQI: giờ đi ngủ/thức dậy là ô văn bản, học sinh gõ "3" hoặc bỏ trống nên không chấm được. Đã sửa: `parseClock` nhận giờ tròn ("3" → 03:00, đồng hồ 24 giờ), câu hỏi ghi rõ định dạng, ô nhập hiển thị `placeholder` của câu hỏi. Chẩn đoán bằng cách chạy `computeScore` trên câu trả lời đã lưu. Phiên đã lưu không chấm lại; học sinh làm lại khảo sát.
 - **Server cũ sau khi sửa backend**: `npm start` không tự nạp lại code. Frontend (file tĩnh) thì mới ngay nhưng API vẫn cũ → lỗi khó hiểu (đã gặp: lưu nhân vật báo lỗi vì server cũ chưa có `equip {kind:'avatar'}`). Kiểm tra nhanh: `/api/public/default-survey` trả 404 = server cũ. Sau khi sửa backend phải khởi động lại server (hoặc dùng `npm run dev`).
 - **Khung game chỉ dựng một lần** (`mountGame`); làm mới sau nhiệm vụ chỉ được cập nhật `#gw-world`, `#gw-ui` và bảng, **không** ghi đè `#app` (sẽ hủy canvas 3D). Rời game phải qua `Tracking.disposeGame()` (được `render()` và `frame()` gọi). `frontend/vendor/` bị loại khỏi graphify bằng `.graphifyignore`.
+- **Thế giới 3D** (`frontend/js/world3d/`, ES module, nạp bằng `import()`): khi vào game học sinh **tự chọn** Làng 2D hoặc Thế giới 3D (beta) (`chooseView`; `game.entry`, quyết định chủ dự án 2026-11-26); không ai bị chuyển sang 3D nếu không chọn; thiếu WebGL2 → vào thẳng 2D, lỗi tải → 2D. Công tắc admin `world3d_enabled` (migration 023) **chỉ** bật việc cất kho báu/kỷ vật. Chuột: khóa con trỏ trong `input.js`, mở bảng thì nhả. `world3d/` không gọi API; `world-ui.js` đưa trạng thái vào. Tên bản đồ, ngưỡng, kho báu, điều kiện trùm **chỉ** ở `backend/src/services/world3d-content.js` (giá trị thử nghiệm); bố cục ở `world3d/maps/`. Nhân vật và công trình 3D được đùn từ SVG của `village.js` nên sửa hình ở đó. Không thưởng Sao, không thể thua, không hiện nhóm, mọi nhiệm vụ mở được từ HUD. Sửa bản đồ phải chạy `test/world3d-client.test.js` (kiểm mọi kho báu đi tới được).
 - **Bạn đồng hành trong làng** vẽ theo `equipped.pet` (`companion()` trong village.js, 4 loài cat/bunny/fox/bear, màu khớp pet.js); panel Nhân vật đổi ngay trong cảnh, lỗi thì trả lại loài cũ.
 - **Quy ước phiên làm việc**: sau mỗi lần làm xong, ghi một mục ngắn vào `docs/implementation-log.md` (chỉ sửa `CLAUDE.md` khi có quy tắc hoặc cạm bẫy lâu dài mới) rồi cập nhật graphify (`graphify-out/`).
 
