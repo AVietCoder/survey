@@ -233,20 +233,17 @@ const Tracking = (() => {
     heart: '<path d="M20.8 8.8c0 4.2-8.8 10-8.8 10s-8.8-5.8-8.8-10a4.5 4.5 0 0 1 8.8-1.2 4.5 4.5 0 0 1 8.8 1.2Z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
   }
-  const timerKey = code => `tk-timer-${code}`
-  const readTimer = code => { try { return sessionStorage.getItem(timerKey(code)) } catch { return null } }
-  const writeTimer = (code, value) => { try { value ? sessionStorage.setItem(timerKey(code), value) : sessionStorage.removeItem(timerKey(code)) } catch { /* sessionStorage có thể bị chặn */ } }
   const clockText = seconds => `${Math.floor(seconds / 60)}:${String(Math.max(0, Math.ceil(seconds % 60))).padStart(2, '0')}`
 
   function taskAction(task) {
     if (task.completed) return `<p class="tk-done-note">${svg('check')}Bạn đã hoàn thành nhiệm vụ này hôm nay</p>`
     if (!task.available) return `<p class="tk-hint">Nhiệm vụ này làm được trong khung giờ ${esc(task.window?.start || '')}–${esc(task.window?.end || '')}.</p>`
     if (task.completionType === 'timer') {
-      const started = readTimer(task.code)
+      const started = task.startedAt || null                    // máy chủ giữ mốc bắt đầu, tải lại trang không mất
       const elapsed = started ? Math.max(0, (Date.now() - new Date(started)) / 1000) : 0
       return started
         ? `<div class="tk-timer ${task.game ? `has-game game-${esc(task.game)}` : ''}" data-timer="${esc(task.code)}" data-started="${esc(started)}" data-min="${task.minSeconds}">${window.RewardGames?.timer(task.game, elapsed) || ''}<b class="tk-clock" aria-live="off">--:--</b>
-            <button class="btn pri" type="button" data-act="complete" data-code="${esc(task.code)}" disabled>Hoàn thành</button>${task.game === 'breathing' ? `<button class="btn" type="button" data-act="cancel" data-code="${esc(task.code)}">Dừng bài thở</button>` : ''}</div>`
+            ${task.choices?.length ? followUp(task) : ''}<button class="btn pri" type="button" data-act="complete" data-code="${esc(task.code)}" disabled>Hoàn thành</button>${task.game === 'breathing' ? `<button class="btn" type="button" data-act="cancel" data-code="${esc(task.code)}">Dừng bài thở</button>` : ''}</div>`
         : `<button class="btn pri" type="button" data-act="start" data-code="${esc(task.code)}">Bắt đầu${task.minSeconds ? ` (${clockText(task.minSeconds)})` : ''}</button>`
     }
     if (task.game === 'three_plans') return window.RewardGames.threePlans(esc(task.code), task.minCount)
@@ -256,10 +253,13 @@ const Tracking = (() => {
         <p class="tk-hint" data-count-hint="${esc(task.code)}">0 / ${task.minCount} ký tự</p>
         <button class="btn pri" type="button" data-act="complete" data-code="${esc(task.code)}" disabled>Xong</button>`
     if (task.completionType === 'choice')
-      return `<div class="tk-choices" role="radiogroup" aria-label="Bạn đã chọn cách nào?">${task.choices.map((choice, index) => `<label class="tk-check"><input type="radio" name="tk-choice-${esc(task.code)}" value="${esc(choice)}" ${index === 0 ? '' : ''}><span>${esc(choice)}</span></label>`).join('')}</div>
+      return `<div class="tk-choices" role="radiogroup" aria-label="Chọn một câu trả lời">${task.choices.map((choice, index) => `<label class="tk-check"><input type="radio" name="tk-choice-${esc(task.code)}" value="${esc(choice)}" ${index === 0 ? '' : ''}><span>${esc(choice)}</span></label>`).join('')}</div>
         <button class="btn pri" type="button" data-act="complete" data-code="${esc(task.code)}" disabled>Xong</button>`
     return `<button class="btn pri" type="button" data-act="complete" data-code="${esc(task.code)}">Mình đã làm</button>`
   }
+
+  /** Câu hỏi sau nhiệm vụ đếm giờ: không bắt buộc, không đổi điểm, chỉ lưu nhãn đã chọn. */
+  const followUp = task => `<fieldset class="tk-followup"><legend>Bạn thấy thế nào sau đó? <small>(không bắt buộc)</small></legend>${task.choices.map(choice => `<label class="tk-check"><input type="radio" name="tk-after-${esc(task.code)}" value="${esc(choice)}"><span>${esc(choice)}</span></label>`).join('')}</fieldset>`
 
   function taskCard(task, unit) {
     return `<article class="tk-card tk-task ${task.completed ? 'is-done' : ''}" data-task="${esc(task.code)}">
@@ -374,10 +374,10 @@ const Tracking = (() => {
     return `<div class="vl-editor"><div class="vl-preview" id="vl-preview">${V.avatarSvg(draft)}</div>
       <div class="vl-controls">
         <fieldset class="vl-fs"><legend>Kiểu nhân vật</legend><div class="vl-presets">${V.CHARACTER_PRESETS.map(preset).join('')}</div></fieldset>
-        <p class="tk-hint" id="vl-preset-hint" ${draft.preset === 'default' ? 'hidden' : ''}>Emma và Tịnh là nhân vật dựng sẵn. Chọn <b>Mặc định</b> nếu bạn muốn tự đổi màu da, tóc, áo.</p>
-        <div id="vl-parts" ${draft.preset === 'default' ? '' : 'hidden'}>${['skin', 'hair', 'style', 'shirt', 'hat'].map(group).join('')}</div>
         <fieldset class="vl-fs"><legend>Bạn đồng hành</legend><div class="vl-opts">${Object.entries(pets).map(([code, name]) => `<button type="button" class="vl-pill" data-pet="${code}" aria-pressed="${code === selectedPet}">${esc(name)}</button>`).join('')}</div>
           <p class="vl-pet-status" id="vl-pet-status" role="status" aria-live="polite"></p></fieldset>
+        <p class="tk-hint" id="vl-preset-hint" ${draft.preset === 'default' ? 'hidden' : ''}>Emma và Tịnh là nhân vật dựng sẵn. Chọn <b>Mặc định</b> nếu bạn muốn tự đổi màu da, tóc, áo.</p>
+        <div id="vl-parts" ${draft.preset === 'default' ? '' : 'hidden'}>${['skin', 'hair', 'style', 'shirt', 'hat'].map(group).join('')}</div>
         <div class="gw-panel-actions"><button class="btn pri" type="button" id="vl-save">Lưu nhân vật</button><button class="btn" type="button" id="vl-reset">Hoàn tác</button></div></div></div>`
   }
 
@@ -755,20 +755,18 @@ const Tracking = (() => {
       const restore = setButtonLoading(button, button.dataset.act === 'start' ? 'Đang bắt đầu…' : 'Đang ghi nhận…')
       try {
         if (button.dataset.act === 'start') {
-          const result = await tapi('POST', `/track/rewards/tasks/${encodeURIComponent(code)}/start`)
-          writeTimer(code, result.startedAt)
+          await tapi('POST', `/track/rewards/tasks/${encodeURIComponent(code)}/start`)
         } else if (button.dataset.act === 'cancel') {
           await tapi('POST', `/track/rewards/tasks/${encodeURIComponent(code)}/cancel`)
-          writeTimer(code, null)
           toast('Đã dừng bài thở. Bạn có thể quay lại khi thấy phù hợp.')
         } else {
           const def = data.tasks.find(item => item.code === code)
           const body = def.completionType === 'self_report' ? { confirmed: true }
             : def.game === 'three_plans' ? { count: RewardGames.countPlans(task) }
             : def.completionType === 'count_chars' ? { count: $('textarea', task).value.length }
-            : def.completionType === 'choice' ? { choice: $('input:checked', task)?.value } : {}
+            : def.completionType === 'choice' ? { choice: $('input:checked', task)?.value }
+            : $('.tk-followup input:checked', task) ? { choice: $('.tk-followup input:checked', task).value } : {}
           const result = await tapi('POST', `/track/rewards/tasks/${encodeURIComponent(code)}/complete`, body)
-          writeTimer(code, null)
           toast(result.duplicate ? 'Nhiệm vụ này đã được ghi nhận rồi' : result.points > 0 ? `Cảm ơn bạn! +${result.points} ${data.unit.icon}` : 'Đã ghi nhận. Hôm nay bạn đã đạt mức tối đa, nhưng việc bạn làm vẫn được trân trọng')
           if (!result.duplicate) { RewardGames.celebrate(task); await new Promise(resolve => setTimeout(resolve, 650)) }
         }
@@ -1088,10 +1086,15 @@ const Tracking = (() => {
     const val = v => (v === null || v === undefined ? '' : esc(v))
     const rangeOf = question => `${question.min}–${question.max}`
     const publicLink = survey.status === 'published' ? '' : '<p class="tk-hint">Khảo sát chưa xuất bản nên người tham gia chưa thể dùng tính năng này.</p>'
+    const canReadAnswers = role === 'owner' || role === 'researcher'              // khớp quyền của API xuất dữ liệu
+    const psqi = data.psqiThresholds, usesPsqi = instruments.some(item => item.id === 'psqi')
+    const psqiNotice = !usesPsqi || !psqi ? '' : `<div class="notice" role="note">${svg('alert')}<div><strong>${psqi.confirmed ? `Ngưỡng PSQI đã xác nhận: ${psqi.cutoffs.join(' và ')}` : 'Nhóm vàng của PSQI đang tắt'}</strong><span>${psqi.confirmed
+      ? 'Học sinh chỉ vào nhóm vàng khi khảo sát được lưu đúng ba mức với hai ngưỡng này.'
+      : 'Ngưỡng ba mức chính thức chưa được xác nhận trong backend/config/psqi-bands.json. Học sinh PSQI rơi vào mức giữa chưa có nhiệm vụ cho đến khi có ngưỡng được xác nhận.'}</span></div></div>`
     shell('tracking', `<nav class="research-back" aria-label="Điều hướng"><a href="#/builder/${esc(surveyId)}">← Về trình tạo</a>${role !== 'owner' ? `<span class="role-badge">${role === 'admin' ? 'Quản trị viên · chỉ xem' : role === 'researcher' ? 'Researcher · chỉ xem' : role === 'viewer' ? 'Chỉ xem' : 'Reviewer · chỉ xem'}</span>` : ''}</nav>
       <div class="head"><div><span class="eyebrow">Theo dõi tiến triển</span><h1>${esc(survey.title)}</h1>
         <p><span class="chip ${config?.enabled ? 'c-run' : 'c-end'}">${config?.enabled ? 'Đang bật' : 'Đang tắt'}</span>${config ? ` · phiên bản đồng ý ${config.consentVersion}` : ' · mặc định tắt cho mọi khảo sát'}</p></div></div>
-      ${publicLink}
+      ${publicLink}${psqiNotice}
       ${config?.warnings?.length ? `<div class="notice" role="alert">${svg('alert')}<div><strong>Cần kiểm tra cấu hình chấm điểm</strong><span>${config.warnings.map(esc).join('<br>')}</span></div></div>` : ''}
       <section class="a-section">${summaryHtml(config ? summary : null)}</section>
       <form id="tk-config" class="card tk-config" novalidate ${canEdit ? '' : 'aria-disabled="true"'}>
@@ -1146,8 +1149,10 @@ const Tracking = (() => {
           <p class="err" id="tk-error" role="alert"></p>
           ${canEdit ? `<div class="tk-actions"><button class="btn pri" type="submit" id="tk-save">${svg('check')}Lưu cấu hình</button></div>` : ''}
         </fieldset></form>
-      <section class="card tk-sched" id="tk-sched" aria-labelledby="tk-sched-h"><h2 id="tk-sched-h">Nhiệm vụ và lịch</h2><div id="tk-sched-body">${loadingBlock()}</div></section>`)
+      <section class="card tk-sched" id="tk-sched" aria-labelledby="tk-sched-h"><h2 id="tk-sched-h">Nhiệm vụ và lịch</h2><div id="tk-sched-body">${loadingBlock()}</div></section>
+      ${canReadAnswers ? `<section class="card tk-answers" id="tk-answers" aria-labelledby="tk-answers-h"><h2 id="tk-answers-h">Câu trả lời nhiệm vụ (Y-01, Y-02)</h2><div id="tk-answers-body">${loadingBlock()}</div></section>` : ''}`)
     loadSchedule(surveyId)
+    if (canReadAnswers) loadAnswers(surveyId)
 
     const form = $('#tk-config')
     if (!canEdit) return
@@ -1257,6 +1262,42 @@ const Tracking = (() => {
         configView(surveyId)
       } catch (error) { restore(); $('#tk-error').textContent = error.message; $('#tk-error').scrollIntoView({ block: 'center' }) }
     }
+  }
+
+  /* ---- Câu trả lời Y-01/Y-02 cho nhà nghiên cứu: tóm tắt, bảng, tải CSV/Excel. Mã người tham gia là mã giả danh. ---- */
+  async function loadAnswers(surveyId, filter = { task: '', from: '', to: '' }) {
+    const box = $('#tk-answers-body')
+    if (!box) return
+    const base = `/tracking/surveys/${encodeURIComponent(surveyId)}/task-answers`
+    const query = new URLSearchParams(Object.entries(filter).filter(([, value]) => value)).toString()
+    let data
+    try { data = await api('GET', `${base}${query ? `?${query}` : ''}`) } catch (error) { box.innerHTML = `<p class="err" role="alert">${esc(error.message)}</p><button class="btn" type="button" id="tk-answers-retry">Thử lại</button>`; $('#tk-answers-retry').onclick = () => loadAnswers(surveyId); return }
+    const shown = data.summary.filter(item => !filter.task || item.task === filter.task)
+    const day = value => value.split('-').reverse().join('/')
+    box.innerHTML = `<p class="tk-hint">Y-01: câu hỏi sau giấc ngủ trưa (không bắt buộc). Y-02: thời gian vào giấc đêm trước, hỏi vào buổi sáng. Mỗi người tham gia hiện bằng một mã giả danh riêng cho khảo sát này; không có tên đăng nhập hay thông tin cá nhân. Đây là dữ liệu tự báo cáo, không phải chẩn đoán. Việc xuất file được ghi vào nhật ký.</p>
+      <form class="tk-answers-filter" id="tk-answers-filter"><label><span class="tk-lbl">Nhiệm vụ</span><select class="sel" name="task"><option value="">Cả Y-01 và Y-02</option>${['Y-01', 'Y-02'].map(code => `<option value="${code}" ${filter.task === code ? 'selected' : ''}>${code}</option>`).join('')}</select></label>
+        <label><span class="tk-lbl">Từ ngày</span><input class="in" type="date" name="from" value="${esc(filter.from)}"></label><label><span class="tk-lbl">Đến ngày</span><input class="in" type="date" name="to" value="${esc(filter.to)}"></label>
+        <button class="btn" type="submit">Lọc</button></form>
+      <div class="tk-answers-summary">${shown.map(item => `<section class="tk-answers-card"><h3>${esc(item.task)} · ${esc(item.name)}</h3><p class="tk-hint">${esc(item.question)}</p><p><b>${item.total}</b> lượt · <b>${item.participants}</b> người</p>
+        <ul>${item.answers.map(answer => `<li><span>${esc(answer.label)}</span><b>${answer.count}</b></li>`).join('')}</ul></section>`).join('')}</div>
+      <div class="tk-actions"><button class="btn pri" type="button" data-export="xlsx" ${data.total ? '' : 'disabled'}>${svg('download')}Tải Excel</button><button class="btn" type="button" data-export="csv" ${data.total ? '' : 'disabled'}>${svg('download')}Tải CSV</button></div>
+      ${data.rows.length ? `<p class="tk-hint">${data.total > data.rows.length ? `Đang hiện ${data.rows.length} trên ${data.total} lượt mới nhất. File tải về có đầy đủ.` : `${data.total} lượt, mới nhất ở trên.`}</p>
+        <div class="tk-sched-wrap" role="region" aria-label="Bảng câu trả lời nhiệm vụ" tabindex="0"><table class="tk-sched-table tk-answers-table"><caption class="sr-only">Câu trả lời của nhiệm vụ Y-01 và Y-02, mới nhất ở trên</caption><thead><tr><th scope="col">Thời điểm (giờ VN)</th><th scope="col">Nhiệm vụ</th><th scope="col">Câu trả lời</th><th scope="col">Mã người tham gia</th></tr></thead>
+        <tbody>${data.rows.map(row => `<tr><td class="num">${esc(day(row.date))} ${esc(row.time)}</td><td><b>${esc(row.task)}</b></td><td>${row.answer ? esc(row.answer) : '<span class="tk-hint">Không trả lời</span>'}</td><td class="num">${esc(row.participant)}</td></tr>`).join('')}</tbody></table></div>`
+        : emptyState('Chưa có câu trả lời', 'Dữ liệu xuất hiện khi học sinh của khảo sát này hoàn thành Y-01 hoặc Y-02.')}`
+    $('#tk-answers-filter').onsubmit = event => { event.preventDefault(); const form = event.currentTarget; loadAnswers(surveyId, { task: form.task.value, from: form.from.value, to: form.to.value }) }
+    $$('[data-export]', box).forEach(button => button.onclick = async () => {
+      const restore = setButtonLoading(button, 'Đang tạo file…')
+      try {
+        const response = await fetch(`/api${base}.${button.dataset.export}${query ? `?${query}` : ''}`, { credentials: 'same-origin' })
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Không tải được file')
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(await response.blob())
+        link.download = response.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] || `task-answers.${button.dataset.export}`
+        document.body.append(link); link.click(); link.remove()
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+      } catch (error) { toast(error.message, 'error') } finally { restore() }
+    })
   }
 
   /* ---- Nhiệm vụ riêng của khảo sát, xếp theo trục thời gian (ngày thứ N). Lưu riêng, không nằm trong nút "Lưu cấu hình". ---- */

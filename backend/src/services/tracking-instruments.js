@@ -5,6 +5,8 @@
  * Quy tắc chung: thiếu hoặc không đọc được BẤT KỲ mục bắt buộc nào → không chấm (status 'incomplete'),
  * không ước lượng, không tính một phần. Điểm chỉ mang tính sàng lọc, KHÔNG phải chẩn đoán.
  */
+import { PSQI_PUBLISHED } from './psqi-bands.js'
+
 
 /* ------------------------------------------------------------------ đọc dữ liệu */
 const text = value => (value === null || value === undefined ? '' : String(value)).trim()
@@ -119,12 +121,12 @@ export const INSTRUMENTS = {
   psqi: {
     id: 'psqi', name: 'Pittsburgh Sleep Quality Index (PSQI)', keys: PSQI_KEYS, range: [0, 21], compute: computePsqi,
     meaning: 'Điểm tổng 0–21; điểm càng cao thì chất lượng giấc ngủ càng kém.',
-    publishedBands: { direction: 'higher_worse', cutoffs: [6], labels: ['Điểm từ 0 đến 5', 'Điểm từ 6 trở lên'], note: 'Ngưỡng công bố của Buysse và cộng sự (1989): điểm trên 5 gợi ý chất lượng giấc ngủ kém, kiểm định trên người trưởng thành.' }
+    publishedBands: PSQI_PUBLISHED                    // backend/config/psqi-bands.json
   },
   hcl32: {
     id: 'hcl32', name: 'Hypomania Checklist (HCL-32)', keys: HCL32_KEYS, range: [0, 32], compute: computeHcl32,
     meaning: 'Số nhận định được chọn ĐÚNG (0–32); điểm càng cao thì càng nhiều biểu hiện hưng phấn nhẹ.',
-    publishedBands: { direction: 'higher_worse', cutoffs: [14], labels: ['Dưới 14 nhận định đúng', 'Từ 14 nhận định đúng trở lên'], note: 'Ngưỡng 14 do Angst và cộng sự (2005) đề xuất cho bản gốc; bản tiếng Việt trong hệ thống đã chỉnh lời một số mục nên ngưỡng cần được kiểm chứng lại trước khi dùng.' }
+    publishedBands: { direction: 'higher_worse', cutoffs: [14, 21], labels: ['0–13 điểm', '14–20 điểm', '21–32 điểm'], note: '0–13: dưới ngưỡng sàng lọc dương tính; 14–20: dương tính sàng lọc (mức vừa); 21–32: dương tính sàng lọc (mức cao). Ngưỡng 14 do Angst và cộng sự (2005) đề xuất cho bản gốc; mốc 21 theo quyết định của chủ dự án (points-in-hcl-32.md). Bản tiếng Việt đã chỉnh lời một số mục nên cần được kiểm chứng trước khi dùng. Chỉ sàng lọc, không chẩn đoán.' }
   }
 }
 

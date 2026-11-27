@@ -333,3 +333,10 @@ body:has(.gw-app) .toast-region{top:16px;bottom:auto;left:50%;right:auto;transfo
 .gw-choose-help p{margin:4px 0 0;line-height:1.6}
 .gw-choose-exit{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:8px;padding:0 14px;font-weight:800;color:var(--brand-700)}
 @media(max-width:560px){.gw-options{grid-template-columns:1fr}.gw-option-art{height:76px}}
+
+/* Bảng nhân vật: nút Lưu luôn nằm trong tầm nhìn; ở 3D chính nhân vật trong cảnh là bản xem trước */
+.gw-panel[data-kind=hero] .gw-panel-actions{position:sticky;bottom:-24px;z-index:2;margin:8px -20px -24px;padding:12px 20px 16px;background:#fff;box-shadow:0 -8px 16px -12px rgba(22,18,59,.3)}
+.gw.is-3d .vl-editor .vl-preview{display:none}
+/* Điện thoại: khi xem nhân vật 3D, tạm ẩn thanh trên để thấy rõ nhân vật phía trên bảng */
+@media(max-width:640px){.gw.is-3d:has(.gw-panel[data-kind=hero]:not([hidden])) :is(.gw-portrait,.gw-player,.gw-res,.gw-tracker){display:none}
+  .gw.is-3d:has(.gw-panel[data-kind=hero]:not([hidden])) .gw-sys{margin-left:auto}}

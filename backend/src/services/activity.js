@@ -34,7 +34,8 @@ export const ACTION_LABELS = {
   'reward.item_create': 'Tạo vật phẩm thưởng',
   'reward.item_update': 'Sửa vật phẩm thưởng',
   'export.csv': 'Xuất CSV',
-  'export.xlsx': 'Xuất XLSX'
+  'export.xlsx': 'Xuất XLSX',
+  'export.task_answers': 'Xuất câu trả lời nhiệm vụ'
 }
 
 /** Bỏ khóa nhạy cảm, cắt chuỗi dài, giới hạn độ sâu để metadata luôn nhỏ và an toàn. */

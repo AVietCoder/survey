@@ -2,14 +2,23 @@
 //   node scripts/seed-demo-study.js --user <username> [--dry-run]
 // Tạo: nghiên cứu + khảo sát PSQI đã xuất bản + liên kết + cấu hình theo dõi (đồng ý, 3 mức điểm THỬ, kênh hỗ trợ THỬ, bật thưởng)
 // + nhiệm vụ mẫu tạm. KHÔNG tạo phản hồi giả. Cần migration 006, 008, 009 (và 018 để tạo hồ sơ theo dõi).
-// Ngưỡng 6 là ngưỡng công bố của PSQI (Buysse 1989); ngưỡng 11 chỉ để thử đủ 3 gói, KHÔNG phải ngưỡng khoa học.
+// Ngưỡng PSQI lấy từ backend/config/psqi-bands.json: hai ngưỡng đã xác nhận (đủ ba mức) nếu có, nếu chưa thì chỉ ngưỡng công bố
+// (hai mức, không có nhóm vàng). Script không tự đặt ngưỡng.
 import 'dotenv/config'
 import { supabase, ok } from '../src/config/supabase.js'
 import { createTrackingService } from '../src/services/tracking.js'
 import { createRewardService } from '../src/services/reward.js'
+import { PSQI_PUBLISHED, confirmedPsqiCutoffs } from '../src/services/psqi-bands.js'
 import { SEED_TASKS } from '../src/services/reward-seed-tasks.js'
 import { TEMPLATES, createSurveyFromTemplate } from '../src/services/survey-templates.js'
 import { loadQuestions } from '../src/services/surveys.js'
+
+function psqiBands(supportText) {
+  const cutoffs = confirmedPsqiCutoffs()
+  if (!cutoffs) return { enabled: true, direction: PSQI_PUBLISHED.direction, cutoffs: [...PSQI_PUBLISHED.cutoffs], labels: [...PSQI_PUBLISHED.labels], showToStudent: false, supportText }
+  const [low, high] = cutoffs
+  return { enabled: true, direction: 'higher_worse', cutoffs, labels: [`Điểm 0–${low - 1}`, `Điểm ${low}–${high - 1}`, `Điểm ${high} trở lên`], showToStudent: false, supportText }
+}
 
 const args = process.argv.slice(2)
 const username = args.includes('--user') ? args[args.indexOf('--user') + 1] : undefined
@@ -61,10 +70,10 @@ if (survey && project && !dry) {
         enabled: true, assessmentName: 'Pittsburgh Sleep Quality Index', scoreMeaning: 'Điểm tổng 0–21; điểm càng cao thì chất lượng giấc ngủ càng kém.',
         scoring: { method: 'instrument', instrument: 'psqi', version: '1' }, consentText: CONSENT, adultAttestation: false,
         schedule: { intervalDays: 14 }, rewardsEnabled: true,
-        bands: { enabled: true, direction: 'higher_worse', cutoffs: [6, 11], labels: ['Điểm 0–5 (thử)', 'Điểm 6–10 (thử)', 'Điểm 11 trở lên (thử)'], showToStudent: false, supportText: SUPPORT }
+        bands: psqiBands(SUPPORT)
       }
     })
-    say('Đã bật theo dõi + chia 3 mức (thử) + kênh hỗ trợ (thử) + nhiệm vụ & điểm thưởng')
+    say(`Đã bật theo dõi + chia ${psqiBands('').cutoffs.length + 1} mức + kênh hỗ trợ (thử) + nhiệm vụ & điểm thưởng`)
   }
 }
 

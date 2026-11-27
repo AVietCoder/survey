@@ -180,7 +180,8 @@ const call = async (handler, { params, body = {} } = {}) => {
 test('listTemplates exposes both instruments with their published cutoffs and no question internals', () => {
   const list = listTemplates()
   assert.deepEqual(list.map(item => item.key), ['psqi', 'hcl32'])
-  assert.ok(list.every(item => item.questionCount > 10 && item.publishedBands.cutoffs.length === 1 && !('questions' in item)))
+  assert.ok(list.every(item => item.questionCount > 10 && !('questions' in item)))
+  assert.deepEqual(list.map(item => item.publishedBands.cutoffs), [[6], [14, 21]])
 })
 
 test('createSurveyFromTemplate builds a draft with all questions and a disabled instrument scoring config', async () => {

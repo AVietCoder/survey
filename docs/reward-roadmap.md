@@ -46,7 +46,7 @@ API hiện có:
 | Chủ đề | Quyết định |
 | :-- | :-- |
 | Đơn vị điểm | Hiển thị **Sao ⭐**; mã nội bộ `TVT`; tên/biểu tượng đổi được trong admin, không ảnh hưởng lịch sử |
-| Trần điểm | 50/ngày, 250/tuần, cấu hình trong admin; mỗi nhiệm vụ 1 lần/ngày (trừ khi `times_per_day` khác); vượt trần vẫn ghi nhận hoàn thành với 0 điểm |
+| Trần điểm | **85/ngày** (chủ dự án, 2026-11-27, thay mức 50 trong `answer.md`; bằng tổng 5 việc vàng), **250/tuần** (giữ nguyên, nên làm đủ mỗi ngày sẽ chạm trần tuần ở ngày thứ 3), cấu hình trong admin; mỗi nhiệm vụ 1 lần/ngày (trừ khi `times_per_day` khác); vượt trần vẫn ghi nhận hoàn thành với 0 điểm |
 | Múi giờ, chuỗi | `Asia/Ho_Chi_Minh`, ngày mới 00:00, cuối tuần/ngày lễ như ngày thường, có Thẻ nghỉ do học sinh tự dùng, không xóa tiến trình khi gián đoạn |
 | Nhóm | Dựa trên kết quả đánh giá, **giữ cố định một chu kỳ** (mặc định 14 ngày, `reward_settings.cycle_days`), chỉ đổi khi có kỳ đánh giá lại hợp lệ; mỗi lần đánh giá là một phiên riêng |
 | Xác minh | Tự báo cáo được chấp nhận; xác minh tối thiểu: đếm giờ phía máy chủ, mốc thời gian/khung giờ, đếm ký tự ở trình duyệt; y-03, y-04 tự báo cáo; R-01 chỉ ghi loại hành động |
@@ -125,7 +125,8 @@ API hiện có:
 - Kênh hỗ trợ thật của trường (tên phòng, người phụ trách, địa chỉ/liên hệ).
 - Phê duyệt của nhà trường và hội đồng đạo đức; nội dung đồng ý/assent/phụ huynh; có miễn hay thay đổi yêu cầu đồng ý không.
 - Thời hạn lưu trữ và quy trình xử lý yêu cầu xóa dữ liệu.
-- Nhiệm vụ chính thức của từng nhóm (xanh/vàng/đỏ) và cách kiểm chứng chính thức; có giữ điểm bằng nhau giữa các nhiệm vụ không.
+- Nhiệm vụ chính thức của nhóm xanh và đỏ và cách kiểm chứng (nhóm vàng đã chốt 2026-11-27: Y-01 11:00–14:00; Y-05 chỉ xác nhận 04:00–11:00, không kiểm ±30 phút; không giám sát thời gian online, không yêu cầu nhập nội dung hoạt động). Nhóm đỏ tạm chưa triển khai.
+- Ngưỡng PSQI ba mức chính thức (`backend/config/psqi-bands.json`, đang `confirmed: false` nên nhóm vàng PSQI tắt).
 - Quy tắc mở khóa vật phẩm (theo tổng Sao tích lũy là đề xuất) và danh sách tên thú cưng, danh hiệu.
 - Thiết kế nhóm đối chứng (tỷ lệ, đơn vị phân bổ: khảo sát hay lớp).
 - Nếu sau này muốn có câu hỏi về ý định tự làm hại bản thân: chỉ khi có công cụ phù hợp và quy trình chuyển tiếp được phê duyệt.

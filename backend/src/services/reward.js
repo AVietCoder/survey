@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { ok } from '../config/supabase.js'
 import { HttpError } from '../middleware/auth.js'
+import { psqiStudy, psqiYellowAllowed } from './psqi-bands.js'
 import { describeWorld, findWorldItem, isGuardianAwake, isMapOpen } from './world3d-content.js'
 
 /**
@@ -16,12 +17,13 @@ export const ITEM_ASSETS = ['star', 'leaf', 'moon', 'heart', 'sun']
 export const PET_SPECIES = ['cat', 'bunny', 'fox', 'bear']
 export const REWARD_GAMES = ['breathing', 'rest_timer', 'three_plans']
 export const DEFAULT_SETTINGS = {
-  unit_name: 'Sao', unit_icon: '⭐', daily_cap: 50, weekly_cap: 250, cycle_days: 14, timezone: 'Asia/Ho_Chi_Minh',
+  unit_name: 'Sao', unit_icon: '⭐', daily_cap: 85, weekly_cap: 250, cycle_days: 14, timezone: 'Asia/Ho_Chi_Minh',
   rest_cards_per_week: 2, streak_enabled: false, world3d_enabled: false,
   group_labels: { green: 'Gói Duy trì', yellow: 'Gói Cân bằng', red: 'Gói Đồng hành' }
 }
 const MISSING = ['42P01', 'PGRST205', 'PGRST204']
 const MAX_COUNT = 5000
+const ANSWERED_TASKS = ['Y-01', 'Y-02']            // nhiệm vụ có câu trả lời cho nhà nghiên cứu (services/task-answers.js)
 
 /**
  * Nhân vật tùy chỉnh: chỉ lưu CHỈ SỐ của các bộ phận có sẵn (không chữ tự do, không ảnh). Mỗi chỉ số phải là số nguyên trong giới hạn.
@@ -224,7 +226,9 @@ export function normalizeTask(input, existing = {}) {
   if (row.window_start && toMinutes(row.window_start) >= toMinutes(row.window_end)) throw new HttpError(400, 'Giờ kết thúc phải sau giờ bắt đầu')
   if (type === 'timer') row.min_seconds = integer(merged.min_seconds, 'Thời gian tối thiểu (giây)', 1, 7200)
   if (type === 'count_chars') row.min_count = integer(merged.min_count, 'Số ký tự tối thiểu', 1, 2000)
-  if (type === 'choice') {
+  // 'choice': câu trả lời là cách hoàn thành. 'timer': có thể kèm câu hỏi không bắt buộc sau khi đủ giờ.
+  const followUp = type === 'timer' && Array.isArray(merged.choices) && merged.choices.length > 0
+  if (type === 'choice' || followUp) {
     const choices = Array.isArray(merged.choices) ? merged.choices.map(item => String(item).trim()).filter(Boolean) : []
     if (choices.length < 2 || choices.length > 6 || choices.some(item => item.length > 40) || new Set(choices).size !== choices.length)
       throw new HttpError(400, 'Cần từ 2 đến 6 lựa chọn khác nhau, mỗi lựa chọn tối đa 40 ký tự')
@@ -274,7 +278,7 @@ function worldResult(result) {
 }
 
 /* ---------------------------------------------------------------------- service */
-export function createRewardService(db, { clock: now = () => new Date() } = {}) {
+export function createRewardService(db, { clock: now = () => new Date(), psqi = psqiStudy() } = {}) {
   const q = result => rewardResult(result)
   const allProfileRows = async (table, columns, mapResult = q, profileId) => {
     const rows = []
@@ -521,13 +525,16 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
 
   /* ---- người tham gia */
   async function groupFor(profileId, settings) {
-    const sessions = q(await db.from('tracking_sessions').select('id,survey_id,band,band_thresholds,completed_at')
+    const sessions = q(await db.from('tracking_sessions').select('id,survey_id,band,band_thresholds,completed_at,scoring_snapshot')
       .eq('profile_id', profileId).not('band', 'is', null).order('completed_at', { ascending: true }))
     const group = currentGroup(sessions, settings.cycle_days)
     if (!group) return null
-    const config = q(await db.from('survey_tracking_configs').select('rewards_enabled,bands').eq('survey_id', group.session.survey_id).maybeSingle())
+    const config = q(await db.from('survey_tracking_configs').select('rewards_enabled,bands,scoring').eq('survey_id', group.session.survey_id).maybeSingle())
+    // Nhóm vàng của PSQI chỉ bật khi ngưỡng ba mức đã được xác nhận (backend/config/psqi-bands.json) và phiên được chia đúng bằng chúng
+    const isPsqi = group.session.scoring_snapshot?.instrument === 'psqi' || config?.scoring?.instrument === 'psqi'
+    const held = isPsqi && group.tier === 'yellow' && !psqiYellowAllowed(group.session.band_thresholds, psqi)
     // Kênh hỗ trợ do nhà nghiên cứu cấu hình (bắt buộc khi bật mức điểm); không bao giờ tự tạo thông tin liên hệ
-    return { tier: group.tier, enabled: config?.rewards_enabled === true, surveyId: group.session.survey_id, startedAt: group.session.completed_at, support: config?.bands?.supportText || null }
+    return { tier: group.tier, enabled: config?.rewards_enabled === true && !held, surveyId: group.session.survey_id, startedAt: group.session.completed_at, support: config?.bands?.supportText || null }
   }
 
   async function totals(profileId, today) {
@@ -562,6 +569,18 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     const done = q(await db.from('reward_completions').select('task_id,slot').eq('profile_id', profileId).eq('local_date', moment.date))
     const programDayNow = programDay(group.startedAt, moment.date, settings.timezone)
     const tasks = taskPool(await listTasks({ onlyActive: true }), group.surveyId).filter(task => task.audience.includes(group.tier) && inDays(task, programDayNow))
+    // Lượt đếm giờ đang dở: máy chủ là nguồn đúng, để mở lại trang (kể cả sau khung giờ) vẫn thấy nút Hoàn thành
+    const starts = tasks.some(task => task.completion_type === 'timer')
+      ? q(await db.from('reward_task_starts').select('task_id,started_at').eq('profile_id', profileId)) : []
+    const runningSince = task => {
+      const row = task.completion_type === 'timer' && starts.find(item => item.task_id === task.id)
+      if (!row) return null
+      const startedMoment = localParts(new Date(row.started_at), settings.timezone)
+      const usable = task.window_start
+        ? startedMoment.date === moment.date && inWindow(task, startedMoment.minutes)
+        : startedMoment.date === moment.date || now() - new Date(row.started_at) < 6 * 3600000
+      return usable ? row.started_at : null
+    }
     return {
       programDay: programDayNow,
       unit, enabled: true, group: { tier: group.tier, label: settings.group_labels[group.tier] },
@@ -572,7 +591,8 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
       localDate: moment.date,
       tasks: tasks.map(task => {
         const count = done.filter(row => row.task_id === task.id).length
-        return publicTask(task, { doneToday: count, completed: count >= task.times_per_day, available: count < task.times_per_day && inWindow(task, moment.minutes) })
+        const startedAt = count < task.times_per_day ? runningSince(task) : null
+        return publicTask(task, { doneToday: count, completed: count >= task.times_per_day, available: count < task.times_per_day && (Boolean(startedAt) || inWindow(task, moment.minutes)), ...(startedAt ? { startedAt } : {}) })
       })
     }
   }
@@ -651,17 +671,34 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
   }
 
   /** Ghi nhận hoàn thành. Idempotent: gửi lặp không cộng thêm điểm. Điểm thực nhận = min(điểm nhiệm vụ, phần còn lại của trần ngày/tuần). */
-  async function complete(profileId, code, body = {}) {
+  const queues = new Map()
+  function complete(profileId, code, body = {}) {
+    const run = () => completeNow(profileId, code, body)
+    const next = (queues.get(profileId) || Promise.resolve()).then(run, run)
+    const tail = next.then(() => {}, () => {}).then(() => { if (queues.get(profileId) === tail) queues.delete(profileId) })
+    queues.set(profileId, tail)
+    return next
+  }
+
+  async function completeNow(profileId, code, body) {
     const { settings, group, task, moment } = await resolveTask(profileId, code)
-    assertWindow(task, moment)
+    if (task.completion_type !== 'timer') assertWindow(task, moment)
     const meta = {}
     if (task.completion_type === 'self_report') {
       if (body.confirmed !== true) throw new HttpError(400, 'Hãy xác nhận bạn đã thực hiện nhiệm vụ')
     } else if (task.completion_type === 'timer') {
       const started = q(await db.from('reward_task_starts').select('started_at').eq('profile_id', profileId).eq('task_id', task.id).maybeSingle())
-      if (!started) throw new HttpError(409, 'Hãy bắt đầu nhiệm vụ trước khi hoàn thành')
+      if (!started) { assertWindow(task, moment); throw new HttpError(409, 'Hãy bắt đầu nhiệm vụ trước khi hoàn thành') }
+      // Bắt đầu đúng khung giờ thì được hoàn thành dù đồng hồ kết thúc sau khung (ví dụ bắt đầu 13:50, xong 14:10)
+      const startedMoment = localParts(new Date(started.started_at), settings.timezone)
+      if (task.window_start && startedMoment.date !== moment.date) throw new HttpError(409, 'Lượt đếm giờ này đã qua ngày. Hãy bắt đầu lại.')
+      assertWindow(task, startedMoment)
       const elapsed = (now() - new Date(started.started_at)) / 1000
       if (elapsed < task.min_seconds) throw new HttpError(409, `Cần thực hiện đủ ${Math.ceil(task.min_seconds / 60)} phút (còn ${Math.ceil(task.min_seconds - elapsed)} giây)`)
+      if (body.choice !== undefined && body.choice !== null) {          // câu trả lời sau khi nghỉ: không bắt buộc, không ảnh hưởng điểm
+        if (!task.choices?.includes(body.choice)) throw new HttpError(400, 'Lựa chọn không hợp lệ')
+        meta.choice = body.choice
+      }
     } else if (task.completion_type === 'count_chars') {
       const count = Number(body.count)
       if (!Number.isInteger(count) || count < task.min_count || count > MAX_COUNT) throw new HttpError(400, `Cần ít nhất ${task.min_count} ký tự`)
@@ -678,6 +715,7 @@ export function createRewardService(db, { clock: now = () => new Date() } = {}) 
     const sums = await totals(profileId, moment.date)
     const awarded = Math.max(0, Math.min(task.points, settings.daily_cap - sums.day, settings.weekly_cap - sums.week))
     const slot = todays.length + 1
+    if (ANSWERED_TASKS.includes(task.code)) meta.survey = group.surveyId
     const inserted = await db.from('reward_completions').insert({
       profile_id: profileId, task_id: task.id, task_code: task.code, local_date: moment.date, slot, points: awarded, base_points: task.points,
       group_tier: group.tier, meta, completed_at: now().toISOString()

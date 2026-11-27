@@ -139,3 +139,23 @@ Tách ra từ `CLAUDE.md`. Mỗi mục: đã làm gì, file/migration, cách ki�
 - Bỏ trường `world3d` trong `GET village`. Nhãn "3D BETA" trên HUD.
 - Kiểm tra: `npm test` 233/233; Firefox headless: màn chọn (390px không tràn), khóa chuột thật sau cú bấm, rê chuột xoay camera, E/mở bảng nhả chuột, kéo dự phòng, rời game nhả, chọn lại, đổi trong Cài đặt không hỏi lại, đường `#/track/tasks`, không WebGL → 2D, hành trình 3D đầy đủ. **Chưa kiểm chứng:** phím Esc nhả chuột (trình duyệt headless không xử lý phím Esc giả), độ nhạy chuột trên máy thật, Safari.
 - Màn chọn dùng lại dữ liệu vừa tải (không gọi lại village/today/inventory; quá 2 phút mới tải lại), chỉ 3D gọi thêm `/world`. Ghi chú đã thêm vào `docs/world3d-plan.md`.
+
+#### Nhiệm vụ nhóm vàng, mức HCL-32, bảng nhân vật 3D (2026-11-27)
+
+- Quyết định chủ dự án (đóng một phần mục §6 lộ trình): Y-01…Y-05 theo `task-for-yellow-one.md`: 15/15/20/15/20 Sao. Trần 50/ngày giữ nguyên. Vẫn đánh dấu tạm. **Bảng đỏ trong cùng file chưa áp dụng** (R-01 đòi gõ tên hoạt động trái nguyên tắc 3; điểm đỏ cao hơn cần xem lại nguyên tắc 1; cờ "thời gian online" là giám sát bị loại).
+- Y-01: đếm giờ 11:00–14:00 (cột hành động ghi 12h30–14h00, gợi ý kiểm chứng ghi 11h–14h) + câu hỏi không bắt buộc, lưu nhãn. Y-02: chọn khoảng thời gian vào giấc, khung 04:00–12:00. Y-03/04 tự báo cáo. Y-05 mốc xác nhận 04:00–11:00 (±30 phút không kiểm được khi không lưu giờ dậy cố định).
+- Sửa: nhiệm vụ đếm giờ bắt đầu đúng khung mà xong sau khung trước đây bị từ chối.
+- HCL-32 `publishedBands` thành ba mức 0–13 / 14–20 / 21–32; cách chấm giữ nguyên.
+- 3D, bảng nhân vật: đổi nhân vật/thú cưng không còn dịch thú cưng đi chỗ khác; thú cưng đứng cạnh khi xem; camera chuyển mượt; nảy nhẹ khi đổi; ẩn khung xem trước 2D trong 3D; bạn đồng hành xếp trên phần tùy chỉnh; nút Lưu dính đáy; điện thoại ẩn thanh trên khi xem.
+- Test: `yellow-tasks.test.js` (6); `npm test` 239/239 (trước bản sửa tiếp theo). Firefox + DB giả: 5 việc vàng đúng điểm, Y-01/Y-02 hoàn thành, bảng nhân vật 1300 và 390px, không lỗi JS. Chưa chạy `apply-yellow-tasks.js` trên Supabase thật.
+- Sửa tiếp: `today()` trả `startedAt` và vẫn cho hoàn thành lượt đếm giờ đã bắt đầu đúng khung (mở lại trang sau 14:00 vẫn có nút); bỏ lưu mốc bắt đầu trong sessionStorage. Điện thoại giữ nút hỗ trợ khi xem nhân vật 3D. `npm test` 241/241. Firefox: ngủ trưa bắt đầu trước 14:00, tải lại sau 14:00, hoàn thành +15; 3D đi/chuột/đổi 3 bản đồ/0-1-0 canvas, không lỗi JS.
+
+#### Quyết định chủ dự án: trần 85, bỏ nhãn mẫu, PSQI, dữ liệu Y-01/Y-02 (2026-11-27)
+
+- Trần ngày 85 (mặc định trong code); trần tuần giữ 250 (đã hỏi). Hoàn thành song song được xếp hàng theo hồ sơ trong tiến trình.
+- Y-01…Y-05 `is_placeholder: false`; Y-01 ghi 11:00–14:00 ở mô tả, khung giờ và kiểm tra. Y-05 giữ xác nhận 04:00–11:00 + mốc thời gian. Nhóm đỏ và xanh không đổi (vẫn nhãn mẫu).
+- PSQI: `backend/config/psqi-bands.json` (ngưỡng công bố + `study` chưa xác nhận); bỏ mốc 11 khỏi `seed-demo-study.js`; nhóm vàng PSQI tắt đến khi xác nhận; trang cấu hình theo dõi hiện thông báo.
+- Dữ liệu Y-01/Y-02: `GET /api/tracking/surveys/:id/task-answers[.csv|.xlsx]` (owner/researcher), mục "Câu trả lời nhiệm vụ" ở `#/tracking/:id`; Excel mỗi nhiệm vụ một trang tính; xuất file ghi nhật ký `export.task_answers`. Không migration mới.
+- `apply-yellow-tasks.js` thêm đổi trần ngày (chỉ khi còn 50) và nhận cả bản nạp 2026-11-27. Chưa chạy trên Supabase thật.
+- Test: `owner-decisions.test.js`; `npm test` 253/253. Firefox + DB giả: thẻ vàng không còn "Nhiệm vụ mẫu", trần 85, mục câu trả lời (lọc, tải CSV/Excel), 390px không tràn, không lỗi JS.
+- Chạy thử `apply-yellow-tasks.js` trên DB giả (xem → ghi → chạy lại): đúng kỳ vọng, dòng admin sửa được giữ (kể cả nhãn mẫu), trần 50 → 85, trần tuần 250 không đổi.

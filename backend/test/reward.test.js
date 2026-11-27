@@ -8,10 +8,14 @@ import { errorHandler } from '../src/middleware/auth.js'
 import { useSupabaseForTests } from '../src/config/supabase.js'
 import { AVATAR_LIMITS, normalizeAvatar, currentGroup, createRewardService, inWindow, localParts, normalizeSettings, normalizeTask, tierOf, weekStart } from '../src/services/reward.js'
 import { SEED_TASKS } from '../src/services/reward-seed-tasks.js'
+import { OLD_YELLOW } from '../src/services/yellow-tasks.js'
 import { useRewardService } from '../src/controllers/rewards.js'
 import { createFakeDb } from './helpers/fake-db.js'
 
 process.env.JWT_SECRET = 'test-secret-reward'
+// Dữ liệu cố định cho test quy tắc (trần, chống trùng, khung giờ): năm việc vàng 10 điểm tự báo cáo như bản mẫu đầu.
+// Nội dung và điểm hiện hành của nhóm vàng được kiểm ở yellow-tasks.test.js.
+const FIXTURE_TASKS = SEED_TASKS.map(task => OLD_YELLOW[task.code] ? { ...task, ...OLD_YELLOW[task.code], choices: undefined } : task)
 const ADMIN = '11111111-1111-4111-8111-111111111111', PROFILE = '22222222-2222-4222-8222-222222222222', SURVEY = '33333333-3333-4333-8333-333333333333'
 const CONSTRAINTS = { unique: { reward_completions: [['profile_id', 'task_id', 'local_date', 'slot']], reward_tasks: [['code']] }, cascade: {} }
 const thresholds = (direction = 'higher_worse', cutoffs = [7, 11]) => ({ direction, cutoffs, labels: cutoffs.map((_, i) => `M${i}`).concat('M-last') })
@@ -26,7 +30,7 @@ async function boot({ band = 2, enabled = true, now = T0, settings, tasks = true
   }, CONSTRAINTS)
   const service = createRewardService(db, { clock: () => current })
   if (settings) await service.saveSettings(settings, ADMIN)
-  if (tasks) for (const task of SEED_TASKS) await service.createTask(task, ADMIN)
+  if (tasks) for (const task of FIXTURE_TASKS) await service.createTask(task, ADMIN)
   return { db, service, setNow: value => { current = new Date(value) } }
 }
 
@@ -82,9 +86,9 @@ test('normalizeSettings keeps one shared cap, distinct friendly names and a sane
   assert.throws(() => normalizeSettings({ unit_name: '' }), /Tên đơn vị/)
 })
 
-test('seed tasks are all placeholders with equal points, so no tier is rewarded more than another', () => {
-  assert.ok(SEED_TASKS.every(task => task.is_placeholder === true))
-  assert.equal(new Set(SEED_TASKS.map(task => task.points)).size, 1)
+test('yellow tasks are official; red and green stay placeholders with equal points', () => {
+  assert.ok(SEED_TASKS.every(task => task.is_placeholder === !task.audience.includes('yellow')))
+  assert.equal(new Set(SEED_TASKS.filter(task => !task.audience.includes('yellow')).map(task => task.points)).size, 1)
   assert.deepEqual([...new Set(SEED_TASKS.flatMap(task => task.audience))].sort(), ['green', 'red', 'yellow'])
   for (const task of SEED_TASKS) assert.doesNotThrow(() => normalizeTask(task), task.code)
 })
@@ -103,7 +107,7 @@ test('today lists only the tasks for the profile group with the friendly name an
   assert.equal(view.enabled, true); assert.equal(view.group.tier, 'red'); assert.equal(view.group.label, 'Gói Đồng hành')
   assert.deepEqual(view.tasks.map(task => task.code), ['R-01', 'R-02', 'R-03', 'R-04', 'R-05'])
   assert.ok(view.tasks.every(task => task.placeholder === true))
-  assert.deepEqual([view.day.cap, view.week.cap, view.balance], [50, 250, 0])
+  assert.deepEqual([view.day.cap, view.week.cap, view.balance], [85, 250, 0])
   const green = await (await boot({ band: 0 })).service.today(PROFILE)
   assert.deepEqual(green.tasks.map(task => task.code), ['G-01', 'G-02', 'G-03'])
   assert.equal((await (await boot({ band: 1 })).service.today(PROFILE)).group.label, 'Gói Cân bằng')

@@ -430,3 +430,11 @@
 .tk-done .tk-has-account,.tk-done .tk-consent{margin:0 0 10px;padding:0 14px;border-radius:var(--r-md);background:#fff;border:1px solid var(--brand-100)}
 .tk-done .tk-form{margin-top:4px}
 .tk-done .tk-consent-text{padding-bottom:14px;line-height:1.6}
+
+/* Câu hỏi không bắt buộc sau nhiệm vụ đếm giờ */
+.tk-followup{width:100%;display:grid;gap:6px;margin:0;padding:10px 12px;border:1px solid var(--brand-100);border-radius:var(--r-lg)}
+.tk-followup legend{padding:0 4px;font-weight:800}
+.tk-followup small{font-weight:600;color:var(--text-muted)}
+.tk-timer:has(.tk-followup){display:grid;grid-template-columns:minmax(0,1fr);justify-items:stretch;gap:10px}
+.tk-timer:has(.tk-followup) .tk-clock{justify-self:center}
+.tk-timer:has(.tk-followup) .btn{width:100%}

@@ -3,6 +3,7 @@ import { HttpError } from '../middleware/auth.js'
 import { getSurveyAccess, UUID } from '../services/research-projects.js'
 import { loadQuestions } from '../services/surveys.js'
 import { createTrackingService } from '../services/tracking.js'
+import { psqiStudyStatus } from '../services/psqi-bands.js'
 import { createTrackingAccountService } from '../services/tracking-accounts.js'
 import { COOKIE_NAME, TTL, deviceLabel } from '../services/tracking-credentials.js'
 
@@ -169,7 +170,7 @@ export async function getConfig(req, res) {
   const config = await tracking.getConfig(survey.id)
   res.json({
     survey: { id: survey.id, title: survey.title, status: survey.status },
-    role, canEdit: canEditConfig(role), config: tracking.serializeConfig(config, questions),
+    role, canEdit: canEditConfig(role), config: tracking.serializeConfig(config, questions), psqiThresholds: psqiStudyStatus(),
     scorableQuestions: tracking.scorableQuestions(questions)
   })
 }

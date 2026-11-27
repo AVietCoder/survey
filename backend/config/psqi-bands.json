@@ -1,0 +1,15 @@
+{
+  "published": {
+    "direction": "higher_worse",
+    "cutoffs": [6],
+    "labels": ["Điểm từ 0 đến 5", "Điểm từ 6 trở lên"],
+    "note": "Ngưỡng công bố của Buysse và cộng sự (1989): điểm trên 5 gợi ý chất lượng giấc ngủ kém, kiểm định trên người trưởng thành."
+  },
+  "study": {
+    "confirmed": false,
+    "cutoffs": null,
+    "confirmedBy": "",
+    "confirmedAt": ""
+  },
+  "howTo": "Nhóm vàng PSQI chỉ bật khi 'study' có confirmed = true, cutoffs là hai số tăng dần (điểm đầu tiên của mức 2 và mức 3, trong 1–21), kèm tên người xác nhận và ngày xác nhận. Sửa file này rồi triển khai lại; sau đó nhà nghiên cứu lưu cấu hình theo dõi của khảo sát PSQI với đúng hai ngưỡng đó."
+}

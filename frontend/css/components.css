@@ -116,3 +116,14 @@
 .task-days legend{padding:0 6px;font-weight:800}
 .tk-sched-name{min-width:170px;max-width:220px}
 .tk-sched-table td:not(.tk-day):not(.tk-sched-actions){white-space:nowrap}
+
+/* ---- Câu trả lời nhiệm vụ (trang cấu hình theo dõi) ---- */
+.tk-answers{margin-top:20px}
+.tk-answers-filter{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:12px 0}
+.tk-answers-filter label{display:grid;gap:4px;flex:1 1 180px;min-width:0}
+.tk-answers-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:12px 0}
+.tk-answers-card{padding:14px;border:1px solid var(--brand-100);border-radius:var(--r-lg)}
+.tk-answers-card h3{margin:0 0 4px;font-size:1rem}
+.tk-answers-card ul{list-style:none;margin:8px 0 0;padding:0}
+.tk-answers-card li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--brand-50)}
+.tk-answers .tk-sched-wrap{max-height:420px}

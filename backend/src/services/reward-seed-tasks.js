@@ -1,19 +1,21 @@
 /**
- * Nhiệm vụ mẫu theo solution.md. TẤT CẢ đều là dữ liệu TẠM (is_placeholder = true): nội dung chính thức chưa được chốt,
- * không tự biến thành nội dung can thiệp. Điểm đặt bằng nhau (10) để không nhóm nào có động lực nhận nhiều hơn;
- * trần ngày/tuần dùng chung (reward_settings). Quản trị viên chỉnh/ẩn/thay trong trang quản trị.
+ * Nhóm vàng (Y-01…Y-05): nội dung và điểm theo task-for-yellow-one.md, chủ dự án xác nhận là chính thức (is_placeholder = false).
+ * Nhóm đỏ và xanh: vẫn là bản mẫu TẠM (is_placeholder = true, 10 điểm) cho đến khi được duyệt.
+ * Trần ngày/tuần dùng chung (reward_settings). Quản trị viên chỉnh/ẩn/thay trong trang quản trị.
  */
 const self = (code, name, audience, description, instructions, extra = {}) => ({
   code, name, audience, description, instructions, points: 10, completion_type: 'self_report', is_placeholder: true, ...extra
 })
 
 export const SEED_TASKS = [
-  self('Y-01', 'Chợp mắt trưa 20 phút', ['yellow'], 'Ngủ trưa ngắn 15–20 phút để tỉnh táo hơn mà không bị choáng khi dậy.', 'Chọn khung 11:00–14:00, bấm bắt đầu và nghỉ ngơi đủ thời gian.',
-    { completion_type: 'timer', min_seconds: 1200, duration_minutes: 20, window_start: '11:00', window_end: '14:00', verification: 'Máy chủ đếm giờ', game: 'rest_timer' }),
-  self('Y-02', 'Ngừng caffeine sớm', ['yellow'], 'Không dùng cà phê, trà đặc hay nước tăng lực trong ít nhất 8 giờ trước giờ ngủ.', 'Xác nhận khi bạn đã làm được.', { verification: 'Tự báo cáo' }),
-  self('Y-03', 'Giảm sáng màn hình', ['yellow'], 'Bật lọc ánh sáng xanh hoặc hạ độ sáng dưới 30% trước giờ ngủ 45 phút.', 'Xác nhận khi bạn đã điều chỉnh.', { verification: 'Tự báo cáo' }),
-  self('Y-04', 'Khung giờ vàng 90 phút', ['yellow'], 'Chọn một khung 90 phút để làm việc khó nhất, không làm nhiều việc cùng lúc.', 'Xác nhận khi bạn đã dành khung giờ đó.', { duration_minutes: 90, verification: 'Tự báo cáo' }),
-  self('Y-05', 'Giờ thức dậy đều đặn', ['yellow'], 'Thức dậy trong khoảng ±30 phút quanh giờ cố định, kể cả cuối tuần.', 'Xác nhận vào buổi sáng.', { window_start: '04:00', window_end: '11:00', verification: 'Mốc thời gian xác nhận' }),
+  // Y-01…Y-05: tên, hành động và điểm theo task-for-yellow-one.md (quyết định của chủ dự án, 2026-11-27)
+  self('Y-01', "Power Nap 20'", ['yellow'], 'Chợp mắt trưa đúng 15–20 phút (không quá 30 phút) trong khoảng 11:00–14:00.', 'Bấm bắt đầu trong khung 11:00–14:00 và nghỉ đủ 20 phút. Xong rồi bạn có thể kể mình thấy thế nào.',
+    { is_placeholder: false, points: 15, completion_type: 'timer', min_seconds: 1200, duration_minutes: 20, window_start: '11:00', window_end: '14:00', choices: ['Tỉnh táo hơn rồi ✨', 'Chưa thấy khác lắm 🌙'], verification: 'Máy chủ đếm giờ; câu hỏi sau khi nghỉ không bắt buộc', game: 'rest_timer' }),
+  self('Y-02', 'Caffeine Curfew', ['yellow'], 'Ngừng hoàn toàn cà phê, trà đặc, nước tăng lực ít nhất 8 tiếng trước giờ dự định ngủ.', 'Sáng hôm sau, nếu hôm qua bạn đã ngừng đúng giờ: tối qua bạn mất khoảng bao lâu để chìm vào giấc ngủ?',
+    { is_placeholder: false, points: 15, completion_type: 'choice', choices: ['Dưới 15 phút', '15–30 phút', '30–60 phút', 'Hơn 60 phút'], window_start: '04:00', window_end: '12:00', verification: 'Hỏi lại vào buổi sáng, chỉ lưu khoảng thời gian đã chọn' }),
+  self('Y-03', 'Screen Dimming', ['yellow'], 'Bật lọc ánh sáng xanh hoặc hạ độ sáng thiết bị điện tử xuống dưới 30% trước giờ ngủ 45 phút.', 'Xác nhận khi bạn đã điều chỉnh.', { is_placeholder: false, points: 20, verification: 'Tự báo cáo' }),
+  self('Y-04', 'Peak Block Lock', ['yellow'], 'Chọn 1 khung giờ vàng (90 phút) trong ngày để giải quyết việc khó nhất, không làm đa nhiệm (multitask).', 'Xác nhận khi bạn đã dành trọn khung giờ đó.', { is_placeholder: false, points: 15, duration_minutes: 90, verification: 'Tự báo cáo' }),
+  self('Y-05', 'Anchor Wake-up', ['yellow'], 'Thức dậy trong biên độ ±30 phút so với giờ dậy cố định (kể cả cuối tuần).', 'Bấm xác nhận ngay sau khi dậy; hệ thống ghi lại thời điểm bạn xác nhận.', { is_placeholder: false, points: 20, window_start: '04:00', window_end: '11:00', verification: 'Mốc thời gian xác nhận' }),
   self('R-01', 'Bớt một việc hôm nay', ['red'], 'Hoãn, nhờ giúp hoặc tạm dừng một việc không gấp để nhẹ gánh hơn.', 'Chọn cách bạn đã làm. Hệ thống chỉ lưu loại lựa chọn, không lưu nội dung.',
     { completion_type: 'choice', choices: ['Hoãn một việc', 'Nhờ người giúp', 'Tạm dừng một hoạt động'], verification: 'Chỉ ghi loại lựa chọn' }),
   self('R-02', 'Tắt thông báo buổi tối', ['red'], 'Ngắt thông báo công việc, câu lạc bộ, nhóm học sau 22:30.', 'Xác nhận khi bạn đã tắt.', { window_start: '22:30', window_end: '23:59', verification: 'Tự báo cáo trong khung giờ' }),
